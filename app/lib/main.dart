@@ -7,14 +7,13 @@ import 'package:flutter/foundation.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 void main() {
-  // runApp(const MyApp());
   runApp(
     ShadcnApp(
       scaling: const AdaptiveScaling(0.95),
       theme: ThemeData(
         colorScheme: ColorSchemes.lightZinc.sky,
         density: Density.compactDensity,
-        surfaceOpacity: 0.9,
+        surfaceOpacity: 0.1,
         surfaceBlur: 12.0,
         radius: 1,
       ),
@@ -841,7 +840,7 @@ class BookmarkItemComponent extends StatelessWidget {
 }
 
 class SearchBoxComponent extends StatefulWidget {
-  SearchBoxComponent({super.key});
+  const SearchBoxComponent({super.key});
 
   @override
   State<SearchBoxComponent> createState() => _SearchBoxComponentState();
