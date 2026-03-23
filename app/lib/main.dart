@@ -1056,33 +1056,37 @@ class StatusIndicator extends StatelessWidget {
       child: Row(
         mainAxisAlignment: .spaceBetween,
         children: [
-          OutlineButton(
-            trailing: const Icon(RadixIcons.caretDown, color: Colors.white),
-            density: .dense,
-            size: .new(1.2),
-            onPressed: () {
-              showDropdown(
-                context: context,
-                alignment: .topLeft,
-                margin: .symmetric(horizontal: 60.0, vertical: 65.0),
-                builder: (context) {
-                  return DropdownMenu(
-                    surfaceOpacity: 0.1,
-                    surfaceBlur: 10.0,
-                    children: [NavigationAccordion()],
-                  );
+          Builder(
+            builder: (context) {
+              return OutlineButton(
+                trailing: const Icon(RadixIcons.caretDown, color: Colors.white),
+                density: .dense,
+                size: .new(1.2),
+                onPressed: () {
+                  showDropdown(
+                    context: context,
+                    alignment: .topCenter,
+                    margin: .symmetric(horizontal: 60.0),
+                    builder: (context) {
+                      return DropdownMenu(
+                        surfaceOpacity: 0.1,
+                        surfaceBlur: 10.0,
+                        children: [NavigationAccordion()],
+                      );
+                    },
+                  ).future.then((_) {
+                    // Called when the dropdown is closed.
+                    if (kDebugMode) {
+                      print('Closed');
+                    }
+                  });
                 },
-              ).future.then((_) {
-                // Called when the dropdown is closed.
-                if (kDebugMode) {
-                  print('Closed');
-                }
-              });
+                child: Container(
+                  margin: .symmetric(horizontal: 12.0, vertical: 8.0),
+                  child: const Text('Home', style: .new(color: Colors.white)),
+                ),
+              );
             },
-            child: Container(
-              margin: .symmetric(horizontal: 12.0, vertical: 8.0),
-              child: const Text('Home', style: .new(color: Colors.white)),
-            ),
           ),
           Row(
             spacing: 0,
@@ -1105,6 +1109,30 @@ class StatusIndicator extends StatelessWidget {
                 size: .new(1),
                 onPressed: () {},
                 child: Text('Images', style: .new(color: Colors.white)),
+              ),
+              Button.text(
+                child: Icon(
+                  BootstrapIcons.gridFill,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              Button.text(
+                child: Icon(
+                  BootstrapIcons.bellFill,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ),
+              Button.text(
+                onPressed: () {
+                  // Handle profile button press
+                },
+                child: Icon(
+                  BootstrapIcons.personFill,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ],
           ),
