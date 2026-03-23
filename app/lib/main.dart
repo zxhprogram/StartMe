@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:app/api/search_service_api.dart';
+import 'package:app/global/global_status.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:signals/signals_flutter.dart';
 
 void main() {
   runApp(
@@ -62,72 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
             child: Column(
               mainAxisAlignment: .center,
               children: [
-                Container(
-                  margin: .symmetric(horizontal: 60.0, vertical: 20.0),
-                  child: Row(
-                    mainAxisAlignment: .spaceBetween,
-                    children: [
-                      OutlineButton(
-                        trailing: const Icon(
-                          RadixIcons.caretDown,
-                          color: Colors.white,
-                        ),
-                        density: .dense,
-                        size: .new(1.2),
-                        onPressed: () {
-                          showDropdown(
-                            context: context,
-                            alignment: .topLeft,
-                            margin: .symmetric(
-                              horizontal: 60.0,
-                              vertical: 65.0,
-                            ),
-                            builder: (context) {
-                              return DropdownMenu(
-                                surfaceOpacity: 0.1,
-                                surfaceBlur: 10.0,
-                                children: [NavigationAccordion()],
-                              );
-                            },
-                          ).future.then((_) {
-                            // Called when the dropdown is closed.
-                            if (kDebugMode) {
-                              print('Closed');
-                            }
-                          });
-                        },
-                        child: Container(
-                          margin: .symmetric(horizontal: 12.0, vertical: 8.0),
-                          child: const Text(
-                            'Home',
-                            style: .new(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        spacing: 0,
-                        children: [
-                          TextButton(
-                            size: .new(1),
-                            onPressed: () {},
-                            child: Text(
-                              'Gmail',
-                              style: .new(color: Colors.white),
-                            ),
-                          ),
-                          TextButton(
-                            size: .new(1),
-                            onPressed: () {},
-                            child: Text(
-                              'Images',
-                              style: .new(color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+                StatusIndicator(),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: .center,
@@ -737,11 +674,19 @@ class TaskComponent extends StatelessWidget {
   }
 }
 
-class MusicComponent extends StatelessWidget {
+class MusicComponent extends StatefulWidget {
   const MusicComponent({super.key});
 
   @override
+  State<MusicComponent> createState() => _MusicComponentState();
+}
+
+class _MusicComponentState extends State<MusicComponent> {
+  // bool _playState = false;
+
+  @override
   Widget build(BuildContext context) {
+    var isPlay = playState.watch(context);
     return Card(
       surfaceOpacity: 0,
       surfaceBlur: 0,
@@ -777,8 +722,13 @@ class MusicComponent extends StatelessWidget {
                   ),
                 ),
                 Button.text(
+                  onPressed: () {
+                    playState.value = !playState.value;
+                  },
                   child: Icon(
-                    BootstrapIcons.playCircleFill,
+                    isPlay
+                        ? BootstrapIcons.pauseFill
+                        : BootstrapIcons.playCircleFill,
                     color: Colors.white,
                     size: 36,
                   ),
@@ -1093,4 +1043,73 @@ class IconButtonMenulItem extends StatelessWidget implements MenuItem {
 
   @override
   PopoverController? get popoverController => null;
+}
+
+class StatusIndicator extends StatelessWidget {
+  const StatusIndicator({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var isPlay = playState.watch(context);
+    return Container(
+      margin: .symmetric(horizontal: 60.0, vertical: 20.0),
+      child: Row(
+        mainAxisAlignment: .spaceBetween,
+        children: [
+          OutlineButton(
+            trailing: const Icon(RadixIcons.caretDown, color: Colors.white),
+            density: .dense,
+            size: .new(1.2),
+            onPressed: () {
+              showDropdown(
+                context: context,
+                alignment: .topLeft,
+                margin: .symmetric(horizontal: 60.0, vertical: 65.0),
+                builder: (context) {
+                  return DropdownMenu(
+                    surfaceOpacity: 0.1,
+                    surfaceBlur: 10.0,
+                    children: [NavigationAccordion()],
+                  );
+                },
+              ).future.then((_) {
+                // Called when the dropdown is closed.
+                if (kDebugMode) {
+                  print('Closed');
+                }
+              });
+            },
+            child: Container(
+              margin: .symmetric(horizontal: 12.0, vertical: 8.0),
+              child: const Text('Home', style: .new(color: Colors.white)),
+            ),
+          ),
+          Row(
+            spacing: 0,
+            children: [
+              isPlay
+                  ? Button.text(
+                      child: Icon(
+                        BootstrapIcons.playFill,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    )
+                  : SizedBox.shrink(),
+              TextButton(
+                size: .new(1),
+                onPressed: () {},
+                child: Text('Gmail', style: .new(color: Colors.white)),
+              ),
+              TextButton(
+                size: .new(1),
+                onPressed: () {},
+                child: Text('Images', style: .new(color: Colors.white)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

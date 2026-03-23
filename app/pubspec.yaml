@@ -37,6 +37,7 @@ dependencies:
   shadcn_flutter: ^0.0.52
   dio: ^5.9.2
   easy_debounce: ^2.0.3
+  signals: ^6.3.0
 
 
 
