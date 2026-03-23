@@ -30,31 +30,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  Color _textColor = Colors.orange;
-  late Timer? _timer;
-  String _currentTime =
-      '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
-
-  @override
-  void initState() {
-    super.initState();
-    //update the time per second use timer
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        // Update the state to trigger a rebuild every second
-        var now = DateTime.now();
-        _currentTime =
-            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel(); // Cancel the timer when the widget is disposed
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,10 +131,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   child: Column(
                     mainAxisAlignment: .center,
                     children: [
-                      Text(
-                        _currentTime,
-                        style: .new(color: Colors.white, fontSize: 90),
-                      ),
+                      TimeComponent(),
                       Text(
                         'Monday, 17 April 2023',
                         style: .new(color: Colors.white, fontSize: 16),
@@ -209,6 +181,42 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
     );
+  }
+}
+
+class TimeComponent extends StatefulWidget {
+  const TimeComponent({super.key});
+
+  @override
+  State<TimeComponent> createState() => _TimeComponentState();
+}
+
+class _TimeComponentState extends State<TimeComponent> {
+  String _currentTime =
+      '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}';
+  late Timer? _timer;
+
+  @override
+  void dispose() {
+    _timer?.cancel(); // Cancel the timer when the widget is disposed
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        var now = DateTime.now();
+        _currentTime =
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_currentTime, style: .new(color: Colors.white, fontSize: 90));
   }
 }
 
@@ -795,12 +803,14 @@ class BookmarkItemComponent extends StatelessWidget {
   final String title;
   final Widget icon;
   final VoidCallback? onPressed;
+
   const BookmarkItemComponent({
     super.key,
     required this.title,
     required this.icon,
     this.onPressed,
   });
+
   @override
   Widget build(BuildContext context) {
     return Button.text(
@@ -829,7 +839,9 @@ class BookmarkItemComponent extends StatelessWidget {
 }
 
 class SearchBoxComponent extends StatelessWidget {
-  const SearchBoxComponent({super.key});
+  SearchBoxComponent({super.key});
+
+  final _searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -837,81 +849,133 @@ class SearchBoxComponent extends StatelessWidget {
       margin: .symmetric(horizontal: 20.0),
       width: 500,
       height: 55,
-      child: TextField(
-        cursorColor: Colors.white,
-        style: .new(color: Colors.white),
-        placeholder: Text(
-          'Search the web...',
-          style: .new(foreground: Paint()..color = Colors.white),
-        ),
-        decoration: .new(
-          border: .all(
-            width: 1,
-            color: Theme.of(context).colorScheme.primary,
-            style: BorderStyle.solid,
-          ),
-          borderRadius: .all(.circular(25)),
-        ),
-        features: [
-          .leading(Icon(BootstrapIcons.search, color: Colors.white)),
-          .trailing(
-            Builder(
-              builder: (context) {
-                return Button.text(
-                  onPressed: () {
-                    showDropdown(
-                      context: context,
-                      alignment: .topLeft,
-                      offset: .new(-50, 0),
-                      builder: (context) {
-                        return ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: 100),
-                          child: DropdownMenu(
-                            surfaceOpacity: 0.1,
-                            surfaceBlur: 10.0,
-                            children: [
-                              IconButtonMenulItem(
-                                icon: BootstrapIcons.google,
-                                onPressed: () {
-                                  // Handle Google search action
-                                },
-                                text: 'Google',
-                              ),
-                              IconButtonMenulItem(
-                                icon: BootstrapIcons.bing,
-                                onPressed: () {
-                                  // Handle Bing search action
-                                },
-                                text: 'Bing',
-                              ),
-                              IconButtonMenulItem(
-                                icon: BootstrapIcons.github,
-                                onPressed: () {
-                                  // Handle GitHub search action
-                                },
-                                text: 'GitHub',
-                              ),
-                            ],
+      child: Builder(
+        builder: (context) {
+          return TextField(
+            cursorColor: Colors.white,
+            controller: _searchController,
+            style: .new(color: Colors.white),
+            placeholder: Text(
+              'Search the web...',
+              style: .new(foreground: Paint()..color = Colors.white),
+            ),
+            onChanged: (str) {
+              if (str == 'abc') {
+                showDropdown(
+                  context: context,
+                  // alignment: .topCenter,
+                  // offset: .new(-50, 0),
+                  anchorAlignment: .bottomCenter,
+                  widthConstraint: .anchorMaxSize,
+                  builder: (context) {
+                    return ConstrainedBox(
+                      constraints: .expand(width: 500, height: 300),
+                      child: DropdownMenu(
+                        surfaceOpacity: 0.1,
+                        surfaceBlur: 10.0,
+                        children: [
+                          IconButtonMenulItem(
+                            icon: BootstrapIcons.google,
+                            onPressed: () {
+                              // Handle Google search action
+                            },
+                            text: 'Google',
                           ),
-                        );
-                      },
+                          IconButtonMenulItem(
+                            icon: BootstrapIcons.bing,
+                            onPressed: () {
+                              // Handle Bing search action
+                            },
+                            text: 'Bing',
+                          ),
+                          IconButtonMenulItem(
+                            icon: BootstrapIcons.github,
+                            onPressed: () {
+                              // Handle GitHub search action
+                            },
+                            text: 'GitHub',
+                          ),
+                        ],
+                      ),
                     );
                   },
-                  child: Row(
-                    children: [
-                      Icon(
-                        BootstrapIcons.google,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      Icon(RadixIcons.caretDown, color: Colors.white, size: 20),
-                    ],
-                  ),
                 );
-              },
+              }
+            },
+            decoration: .new(
+              border: .all(
+                width: 1,
+                color: Theme.of(context).colorScheme.primary,
+                style: BorderStyle.solid,
+              ),
+              borderRadius: .all(.circular(25)),
             ),
-          ),
-        ],
+            features: [
+              .leading(Icon(BootstrapIcons.search, color: Colors.white)),
+              .trailing(
+                Builder(
+                  builder: (context) {
+                    return Button.text(
+                      onPressed: () {
+                        showDropdown(
+                          context: context,
+                          alignment: .topLeft,
+                          offset: .new(-50, 0),
+                          builder: (context) {
+                            return ConstrainedBox(
+                              constraints: BoxConstraints(maxWidth: 100),
+                              child: DropdownMenu(
+                                surfaceOpacity: 0.1,
+                                surfaceBlur: 10.0,
+                                children: [
+                                  IconButtonMenulItem(
+                                    icon: BootstrapIcons.google,
+                                    onPressed: () {
+                                      // Handle Google search action
+                                    },
+                                    text: 'Google',
+                                  ),
+                                  IconButtonMenulItem(
+                                    icon: BootstrapIcons.bing,
+                                    onPressed: () {
+                                      // Handle Bing search action
+                                    },
+                                    text: 'Bing',
+                                  ),
+                                  IconButtonMenulItem(
+                                    icon: BootstrapIcons.github,
+                                    onPressed: () {
+                                      // Handle GitHub search action
+                                    },
+                                    text: 'GitHub',
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      child: Row(
+                        children: [
+                          Icon(
+                            BootstrapIcons.google,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                          Icon(
+                            RadixIcons.caretDown,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
