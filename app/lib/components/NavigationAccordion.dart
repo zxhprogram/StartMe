@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 class NavigationAccordion extends StatefulWidget implements MenuItem {
@@ -46,11 +47,11 @@ class _NavigationAccordionState extends State<NavigationAccordion> {
           content: Column(
             children: [
               Button.link(
-                onPressed: () {},
-                child: Text(
-                  'Simple dashboard overview.',
-                  style: .new(color: Colors.white),
-                ),
+                onPressed: () {
+                  closeOverlay(context);
+                  context.go('/bookmarks');
+                },
+                child: Text('My Bookmarks', style: .new(color: Colors.white)),
               ),
             ],
           ),

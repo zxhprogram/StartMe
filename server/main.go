@@ -25,5 +25,27 @@ func main() {
 			"data":    list,
 		})
 	})
+	r.GET("/bookmark/list", func(ctx *gin.Context) {
+		var bookmarks []Bookmark
+		for i := 0; i < 10; i++ {
+			bookmarks = append(bookmarks, Bookmark{
+				Id:   i,
+				Name: fmt.Sprintf("bookMark%d", i),
+				Url:  "http://123.com",
+				Icon: "",
+			})
+		}
+		ctx.JSON(200, gin.H{
+			"message": "ok",
+			"data":    bookmarks,
+		})
+	})
 	r.Run(":8080") // listen and serve on 0.0.0.0:8080
+}
+
+type Bookmark struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Url  string `json:"url"`
+	Icon string `json:"icon"`
 }

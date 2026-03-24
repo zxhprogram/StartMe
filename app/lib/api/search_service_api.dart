@@ -1,15 +1,7 @@
-import 'package:dio/dio.dart';
+import 'package:app/global/global_status.dart';
 
-var dio = Dio(
-  BaseOptions(
-    baseUrl: 'http://localhost:8080',
-    connectTimeout: const Duration(seconds: 5),
-    receiveTimeout: const Duration(seconds: 5),
-  ),
-);
 Future<SearchKeywordResponse> search(String query) async {
   var response = await dio.get('/search/$query');
-  print(response.data);
   return .fromJson(response.data);
 }
 
