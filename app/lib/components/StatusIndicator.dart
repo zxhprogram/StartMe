@@ -80,6 +80,24 @@ class StatusIndicator extends StatelessWidget {
               Button.text(
                 onPressed: () {
                   // Handle notifications button press
+                  openDrawer(
+                    context: context,
+                    expands: true,
+                    builder: (context) {
+                      return Container(
+                        padding: const EdgeInsets.all(48),
+                        color: Colors.white,
+                        child: IntrinsicWidth(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [Text('there is no notification')],
+                          ),
+                        ),
+                      );
+                    },
+                    position: .right,
+                    // position: positions[count % positions.length],
+                  );
                 },
                 child: Icon(
                   BootstrapIcons.bellFill,
