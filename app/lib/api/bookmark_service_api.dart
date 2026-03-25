@@ -38,4 +38,9 @@ class BookmarkItem {
       icon: json['icon'],
     );
   }
+
+  @override
+  String toString() {
+    return '{id = $id,name = $name,url = $url,icon=$icon}';
+  }
 }
