@@ -1,4 +1,5 @@
 import 'dart:async'; // 引入 Timer
+import 'dart:math';
 import 'package:app/api/bookmark_service_api.dart';
 import 'package:flutter/material.dart' show Material;
 import 'package:go_router/go_router.dart';
@@ -206,6 +207,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                       color: Colors.transparent,
                       child: _buildItemUI(targetItem, true),
                     ),
+                    onDragCompleted: () {},
 
                     // UI渲染，如果是被悬浮状态，可以加个边框或缩放提示用户要合并了
                     child: Container(
@@ -229,10 +231,27 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   // 为了代码整洁，单独抽离卡片UI
   Widget _buildItemUI(BookmarkItemWithIndex e, bool isDragging) {
+    var isDirectory = e.children != null && e.children!.isNotEmpty;
+    if (isDirectory) {
+      var elements = <BookmarkItem>[];
+      // s.add(.new( e.item));
+      elements.add(e.item);
+      for (var e in e.children!) {
+        elements.add(e);
+      }
+      return Container(
+        width: 100,
+        height: 100,
+        color: Colors.pink,
+        child: buildChild(elements),
+      );
+    }
     return Container(
       width: 100,
       height: 100,
-      color: Colors.white.withOpacity(isDragging ? 0.8 : 0.5),
+      color: Colors.white.withAlpha(
+        isDragging ? 255 * 0.8.round() : 255 * 0.5.round(),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -247,5 +266,40 @@ class _BookmarksPageState extends State<BookmarksPage> {
         ],
       ),
     );
+  }
+
+  Widget buildChild(List<BookmarkItem> elements) {
+    if (elements.length <= 2) {
+      var list = elements.map((e) {
+        return Image.network(e.icon, width: 40, height: 40);
+      }).toList();
+      return Row(mainAxisAlignment: .center, spacing: 8, children: list);
+    }
+    if (elements.length > 2) {
+      var firstLine = elements.sublist(0, 2);
+      var secondLine = elements.sublist(2, min(elements.length, 4));
+      return Column(
+        mainAxisAlignment: .center,
+        crossAxisAlignment: .stretch,
+        spacing: 8,
+        children: [
+          Row(
+            spacing: 8,
+            mainAxisAlignment: .center,
+            children: firstLine.map((e) {
+              return Image.network(e.icon, width: 40, height: 40);
+            }).toList(),
+          ),
+          Row(
+            spacing: 8,
+            mainAxisAlignment: .center,
+            children: secondLine.map((e) {
+              return Image.network(e.icon, width: 40, height: 40);
+            }).toList(),
+          ),
+        ],
+      );
+    }
+    return Container();
   }
 }

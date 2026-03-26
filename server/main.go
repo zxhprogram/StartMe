@@ -32,7 +32,7 @@ func main() {
 				Id:   i,
 				Name: fmt.Sprintf("bookMark%d", i),
 				Url:  "http://123.com",
-				Icon: "https://github.githubassets.com/assets/apple-touch-icon-144x144-b882e354c005.png",
+				Icon: "https://img-s.msn.cn/tenant/amp/entityid/AA1Nk7A4?w=100&h=0&q=90&m=6&f=png&u=t",
 			})
 		}
 		ctx.JSON(200, gin.H{
