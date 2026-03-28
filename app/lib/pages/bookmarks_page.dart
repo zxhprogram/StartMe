@@ -66,26 +66,15 @@ class _BookmarksPageState extends State<BookmarksPage> {
     print('触发合并逻辑：${source.item.name} 合并到 ${target.item.name}');
 
     var currentList = List<BookmarkItemWithIndex>.from(_bookmarksState.value);
-
-    // 1. 从列表中移除被拖拽的源元素
-    // currentList.removeWhere(
-    //   (e) => e.item.name == source.item.name,
-    // ); // 建议用唯一ID比较
-
-    // 2. 找到目标元素，并将其改造为“文件夹”或把内容放进去
     var targetIndex = currentList.indexWhere(
       (e) => e.item.name == target.item.name,
     );
     if (targetIndex != -1) {
-      // 初始化 children 列表（如果是第一次合并）
-      // (currentList[targetIndex].children ??= []).add(source.item);
       _willMergeItem.value = WillMergeItem(
         targetIndex: targetIndex,
         item: source.item,
       );
     }
-
-    // _bookmarksState.value = currentList;
   }
 
   // ==== 核心业务逻辑：排序 ====
@@ -202,11 +191,6 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     data: targetItem, // 【重要】把当前数据作为 data 传出去
 
                     onDragStarted: () {
-                      // 开始拖拽时，重置合并标记
-                      // 备份拖拽事件开始之前的所有的数据
-                      // _backupBookmarks = List<BookmarkItemWithIndex>.from(
-                      //   _bookmarksState.value,
-                      // );
                       _backupBookmarks = <BookmarkItemWithIndex>[];
                       for (var item in _bookmarksState.value) {
                         _backupBookmarks.add(
@@ -244,6 +228,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                         ); // 建议用唯一ID比较
                         _bookmarksState.value = nb;
                         _willMergeItem.value = null;
+                        _backupBookmarks.clear();
                       }
                     },
 
