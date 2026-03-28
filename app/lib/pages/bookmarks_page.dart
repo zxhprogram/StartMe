@@ -14,21 +14,26 @@ class BookmarksPage extends StatefulWidget {
 }
 
 class BookmarkItemWithIndex {
-  int preservedIndex;
   BookmarkItem item;
 
   // 假定你可能需要一个字段来存储它内部是不是包含了多个书签（文件夹模式）
   List<BookmarkItem>? children;
 
-  BookmarkItemWithIndex({
-    required this.preservedIndex,
-    required this.item,
-    this.children,
-  });
+  BookmarkItemWithIndex({required this.item, this.children});
 
   @override
   String toString() {
-    return '{preservedIndex = $preservedIndex, item = $item}';
+    return '{item = $item},children = $children}';
+  }
+}
+
+class WillMergeItem {
+  int targetIndex;
+  BookmarkItem item;
+  WillMergeItem({required this.targetIndex, required this.item});
+  @override
+  String toString() {
+    return '{targetIndex = $targetIndex,item = $item}';
   }
 }
 
@@ -39,6 +44,9 @@ class _BookmarksPageState extends State<BookmarksPage> {
   Timer? _hoverTimer;
   // 用于标记本次拖拽是否已经触发了合并，防止松手时又触发重排
   bool _hasMerged = false;
+  // 用于备份拖拽事件开始之前的所有的数据
+  List<BookmarkItemWithIndex> _backupBookmarks = [];
+  final _willMergeItem = signal<WillMergeItem?>(null);
 
   @override
   void initState() {
@@ -48,9 +56,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   void _fetchData() async {
     var r = await bookmarkList();
-    var index = 0;
     _bookmarksState.value = r.data
-        .map((e) => BookmarkItemWithIndex(preservedIndex: index++, item: e))
+        .map((e) => BookmarkItemWithIndex(item: e))
         .toList();
   }
 
@@ -61,9 +68,9 @@ class _BookmarksPageState extends State<BookmarksPage> {
     var currentList = List<BookmarkItemWithIndex>.from(_bookmarksState.value);
 
     // 1. 从列表中移除被拖拽的源元素
-    currentList.removeWhere(
-      (e) => e.item.name == source.item.name,
-    ); // 建议用唯一ID比较
+    // currentList.removeWhere(
+    //   (e) => e.item.name == source.item.name,
+    // ); // 建议用唯一ID比较
 
     // 2. 找到目标元素，并将其改造为“文件夹”或把内容放进去
     var targetIndex = currentList.indexWhere(
@@ -71,16 +78,14 @@ class _BookmarksPageState extends State<BookmarksPage> {
     );
     if (targetIndex != -1) {
       // 初始化 children 列表（如果是第一次合并）
-      currentList[targetIndex].children ??= [];
-      currentList[targetIndex].children!.add(source.item);
+      // (currentList[targetIndex].children ??= []).add(source.item);
+      _willMergeItem.value = WillMergeItem(
+        targetIndex: targetIndex,
+        item: source.item,
+      );
     }
 
-    // 3. 重新整理索引
-    for (int i = 0; i < currentList.length; i++) {
-      currentList[i].preservedIndex = i;
-    }
-
-    _bookmarksState.value = currentList;
+    // _bookmarksState.value = currentList;
   }
 
   // ==== 核心业务逻辑：排序 ====
@@ -104,17 +109,13 @@ class _BookmarksPageState extends State<BookmarksPage> {
     // 3. 插入到目标位置
     currentList.insert(targetIndex, removedItem);
 
-    // 4. 重要！重新生成所有的 preservedIndex，防止后续拖拽错乱
-    for (int i = 0; i < currentList.length; i++) {
-      currentList[i].preservedIndex = i;
-    }
-
     _bookmarksState.value = currentList;
   }
 
   @override
   Widget build(BuildContext context) {
     var bookmarks = _bookmarksState.watch(context);
+    var willMergeItem = _willMergeItem.watch(context);
 
     return Scaffold(
       floatingFooter: true,
@@ -158,7 +159,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                   _hoverTimer?.cancel();
 
                   // 启动 1 秒定时器
-                  _hoverTimer = Timer(const Duration(seconds: 1), () {
+                  _hoverTimer = Timer(const Duration(seconds: 3), () {
                     // 如果 1 秒到了，用户还没移开也没松手，触发合并！
                     _hasMerged = true;
                     _mergeItems(draggedItem, targetItem);
@@ -169,6 +170,14 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
                 // 2. 当拖拽物不到1秒就移开时触发
                 onLeave: (data) {
+                  if (_hasMerged) {
+                    print('触发移开逻辑：${targetItem.item.name} 移开 $data');
+                    print('合并被取消，恢复备份数据, 备份数据: $_backupBookmarks');
+                    _bookmarksState.value = _backupBookmarks;
+                    _hasMerged = false;
+                    _willMergeItem.value = null;
+                  }
+
                   // 取消合并的定时器
                   _hoverTimer?.cancel();
                 },
@@ -194,20 +203,49 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
                     onDragStarted: () {
                       // 开始拖拽时，重置合并标记
+                      // 备份拖拽事件开始之前的所有的数据
+                      // _backupBookmarks = List<BookmarkItemWithIndex>.from(
+                      //   _bookmarksState.value,
+                      // );
+                      _backupBookmarks = <BookmarkItemWithIndex>[];
+                      for (var item in _bookmarksState.value) {
+                        _backupBookmarks.add(
+                          .new(item: item.item, children: item.children),
+                        );
+                      }
+
                       _hasMerged = false;
                     },
 
                     childWhenDragging: Opacity(
                       opacity: 0.3, // 拖拽时，原本的位置变成半透明
-                      child: _buildItemUI(targetItem, false),
+                      child: _buildItemUI(e: targetItem, isDragging: false),
                     ),
-
                     feedback: Material(
                       // 必须包裹 Material 避免拖拽时样式丢失
                       color: Colors.transparent,
-                      child: _buildItemUI(targetItem, true),
+                      child: _buildItemUI(
+                        e: targetItem,
+                        isDragging: true,
+                        willMergeItem: willMergeItem,
+                      ),
                     ),
-                    onDragCompleted: () {},
+                    onDragCompleted: () {
+                      print(
+                        '触发拖拽完成逻辑：${targetItem.item.name} and willMergeItem: $willMergeItem',
+                      );
+                      if (willMergeItem != null) {
+                        var targetH = bookmarks[willMergeItem.targetIndex];
+                        (targetH.children ??= []).add(targetItem.item);
+                        var nb = List<BookmarkItemWithIndex>.from(bookmarks);
+                        // 1. 从列表中移除被拖拽的源元素
+                        nb.removeWhere(
+                          (e) => e.item.name == targetItem.item.name,
+                        ); // 建议用唯一ID比较
+                        _bookmarksState.value = nb;
+                        _willMergeItem.value = null;
+                      }
+                    },
 
                     // UI渲染，如果是被悬浮状态，可以加个边框或缩放提示用户要合并了
                     child: Container(
@@ -217,7 +255,11 @@ class _BookmarksPageState extends State<BookmarksPage> {
                             : null,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: _buildItemUI(targetItem, false),
+                      child: _buildItemUI(
+                        e: targetItem,
+                        isDragging: false,
+                        willMergeItem: willMergeItem,
+                      ),
                     ),
                   );
                 },
@@ -230,20 +272,39 @@ class _BookmarksPageState extends State<BookmarksPage> {
   }
 
   // 为了代码整洁，单独抽离卡片UI
-  Widget _buildItemUI(BookmarkItemWithIndex e, bool isDragging) {
-    var isDirectory = e.children != null && e.children!.isNotEmpty;
-    if (isDirectory) {
-      var elements = <BookmarkItem>[];
-      // s.add(.new( e.item));
-      elements.add(e.item);
-      for (var e in e.children!) {
-        elements.add(e);
+  Widget _buildItemUI({
+    required BookmarkItemWithIndex e,
+    bool isDragging = false,
+    WillMergeItem? willMergeItem,
+  }) {
+    if (willMergeItem != null) {
+      var t = _bookmarksState.value[willMergeItem.targetIndex];
+      if (t.item.name == e.item.name) {
+        print('合并项：${willMergeItem.item.name}');
+        var ccc = e.children ?? [];
+        List.from(ccc);
+        ccc.add(willMergeItem.item);
+
+        var elements = <BookmarkItem>[];
+        elements.add(e.item);
+        elements.addAll(ccc);
+
+        print('合并后：$elements.length');
+        return Container(
+          width: 100,
+          height: 100,
+          color: Colors.pink,
+          child: buildChild(elements),
+        );
       }
+    }
+    if (e.children != null && e.children!.isNotEmpty) {
+      var c = List<BookmarkItem>.from(e.children!)..add(e.item);
       return Container(
         width: 100,
         height: 100,
         color: Colors.pink,
-        child: buildChild(elements),
+        child: buildChild(c),
       );
     }
     return Container(
