@@ -2,6 +2,7 @@ import 'dart:async'; // 引入 Timer
 import 'dart:math';
 import 'package:app/api/bookmark_service_api.dart';
 import 'package:flutter/material.dart' show Material;
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:signals/signals_flutter.dart';
@@ -270,6 +271,10 @@ class _BookmarksPageState extends State<BookmarksPage> {
     );
   }
 
+  int people = 0;
+  bool showBookmarksBar = false;
+  bool showFullUrls = true;
+
   // 为了代码整洁，单独抽离卡片UI
   Widget _buildItemUI({
     required BookmarkItemWithIndex e,
@@ -305,7 +310,114 @@ class _BookmarksPageState extends State<BookmarksPage> {
         width: 100,
         height: 100,
         color: Colors.pink,
-        child: buildChild(c.toList()),
+        child: ContextMenu(
+          items: [
+            // Simple command with Ctrl+[ shortcut.
+            const MenuButton(
+              trailing: MenuShortcut(
+                activator: SingleActivator(
+                  LogicalKeyboardKey.bracketLeft,
+                  control: true,
+                ),
+              ),
+              child: Text('重命名'),
+            ),
+            // Disabled command example with Ctrl+] shortcut.
+            const MenuButton(
+              trailing: MenuShortcut(
+                activator: SingleActivator(
+                  LogicalKeyboardKey.bracketRight,
+                  control: true,
+                ),
+              ),
+              enabled: false,
+              child: Text('Forward'),
+            ),
+            // Enabled command with Ctrl+R shortcut.
+            const MenuButton(
+              trailing: MenuShortcut(
+                activator: SingleActivator(
+                  LogicalKeyboardKey.keyR,
+                  control: true,
+                ),
+              ),
+              child: Text('Reload'),
+            ),
+            // Submenu with additional tools and a divider.
+            const MenuButton(
+              subMenu: [
+                MenuButton(
+                  trailing: MenuShortcut(
+                    activator: SingleActivator(
+                      LogicalKeyboardKey.keyS,
+                      control: true,
+                    ),
+                  ),
+                  child: Text('Save Page As...'),
+                ),
+                MenuButton(child: Text('Create Shortcut...')),
+                MenuButton(child: Text('Name Window...')),
+                MenuDivider(),
+                MenuButton(child: Text('Developer Tools')),
+              ],
+              child: Text('More Tools'),
+            ),
+            const MenuDivider(),
+            // Checkbox item; keep menu open while toggling for quick changes.
+            MenuCheckbox(
+              value: showBookmarksBar,
+              onChanged: (context, value) {
+                setState(() {
+                  showBookmarksBar = value;
+                });
+              },
+              autoClose: false,
+              trailing: const MenuShortcut(
+                activator: SingleActivator(
+                  LogicalKeyboardKey.keyB,
+                  control: true,
+                  shift: true,
+                ),
+              ),
+              child: const Text('Show Bookmarks Bar'),
+            ),
+            MenuCheckbox(
+              value: showFullUrls,
+              onChanged: (context, value) {
+                setState(() {
+                  showFullUrls = value;
+                });
+              },
+              autoClose: false,
+              child: const Text('Show Full URLs'),
+            ),
+            const MenuDivider(),
+            const MenuLabel(child: Text('People')),
+            const MenuDivider(),
+            // Radio group; only one person can be selected at a time.
+            MenuRadioGroup(
+              value: people,
+              onChanged: (context, value) {
+                setState(() {
+                  people = value;
+                });
+              },
+              children: const [
+                MenuRadio(
+                  value: 0,
+                  autoClose: false,
+                  child: Text('Pedro Duarte'),
+                ),
+                MenuRadio(
+                  value: 1,
+                  autoClose: false,
+                  child: Text('Colm Tuite'),
+                ),
+              ],
+            ),
+          ],
+          child: buildChild(c.toList()),
+        ),
       );
     }
     return Container(
@@ -335,30 +447,46 @@ class _BookmarksPageState extends State<BookmarksPage> {
       var list = elements.map((e) {
         return Image.network(e.icon, width: 40, height: 40);
       }).toList();
-      return Row(mainAxisAlignment: .center, spacing: 8, children: list);
+      return Column(
+        mainAxisAlignment: .center,
+        children: [
+          Expanded(
+            child: Row(mainAxisAlignment: .center, spacing: 8, children: list),
+          ),
+          Text('收藏夹'),
+        ],
+      );
     }
     if (elements.length > 2) {
       var firstLine = elements.sublist(0, 2);
       var secondLine = elements.sublist(2, min(elements.length, 4));
       return Column(
         mainAxisAlignment: .center,
-        crossAxisAlignment: .stretch,
-        spacing: 8,
+        crossAxisAlignment: .center,
         children: [
-          Row(
-            spacing: 8,
-            mainAxisAlignment: .center,
-            children: firstLine.map((e) {
-              return Image.network(e.icon, width: 40, height: 40);
-            }).toList(),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: .center,
+              mainAxisAlignment: .center,
+              children: [
+                Row(
+                  spacing: 8,
+                  mainAxisAlignment: .center,
+                  children: firstLine.map((e) {
+                    return Image.network(e.icon, width: 32, height: 32);
+                  }).toList(),
+                ),
+                Row(
+                  spacing: 8,
+                  mainAxisAlignment: .center,
+                  children: secondLine.map((e) {
+                    return Image.network(e.icon, width: 32, height: 32);
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
-          Row(
-            spacing: 8,
-            mainAxisAlignment: .center,
-            children: secondLine.map((e) {
-              return Image.network(e.icon, width: 40, height: 40);
-            }).toList(),
-          ),
+          Text('收藏夹'),
         ],
       );
     }
