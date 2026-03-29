@@ -280,8 +280,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
       var t = _bookmarksState.value[willMergeItem.targetIndex];
       if (t.item.name == e.item.name) {
         print('合并项：${willMergeItem.item.name}');
-        var ccc = e.children ?? [];
-        List.from(ccc);
+        var ccc = List<BookmarkItem>.from(e.children ?? []);
         if (!ccc.contains(willMergeItem.item)) {
           ccc.add(willMergeItem.item);
         }
@@ -300,12 +299,13 @@ class _BookmarksPageState extends State<BookmarksPage> {
       }
     }
     if (e.children != null && e.children!.isNotEmpty) {
-      var c = List<BookmarkItem>.from(e.children!)..add(e.item);
+      print('willMergeItem is null and 子项：${e.children} and ${e.item}');
+      var c = (List<BookmarkItem>.from(e.children!))..add(e.item);
       return Container(
         width: 100,
         height: 100,
         color: Colors.pink,
-        child: buildChild(c),
+        child: buildChild(c.toList()),
       );
     }
     return Container(
