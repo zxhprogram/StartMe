@@ -253,6 +253,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                         border: isHovered
                             ? Border.all(color: Colors.blue, width: 2)
                             : null,
+                        color: Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: _buildItemUI(
@@ -298,7 +299,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
         return Container(
           width: 100,
           height: 100,
-          color: Colors.pink,
+          color: Colors.transparent,
           child: buildChild(elements.toList()),
         );
       }
@@ -306,10 +307,34 @@ class _BookmarksPageState extends State<BookmarksPage> {
     if (e.children != null && e.children!.isNotEmpty) {
       print('willMergeItem is null and 子项：${e.children} and ${e.item}');
       var c = (List<BookmarkItem>.from(e.children!))..add(e.item);
-      return Container(
-        width: 100,
+      return AnimatedContainer(
+        // 添加动画过渡，让拖拽前后的变化更加丝滑
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        width: 90, // 稍微调整尺寸比例，显得更精致
         height: 100,
-        color: Colors.pink,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        decoration: BoxDecoration(
+          // 默认提供一个纯净的背景色，拖拽时微微透明
+          color: isDragging ? Colors.white.withOpacity(0.9) : Colors.white,
+          borderRadius: BorderRadius.circular(16), // 更圆润的倒角（现代APP标配）
+          // 拖拽时显示粉色边框，平时隐藏
+          border: Border.all(
+            color: isDragging ? Colors.pink : Colors.transparent,
+            width: 1.5,
+          ),
+          // 添加柔和的投影，拖拽时投影变大，产生“浮起”的视觉效果
+          boxShadow: [
+            BoxShadow(
+              color: isDragging
+                  ? Colors.pink.withOpacity(0.2) // 拖拽时粉色发光投影
+                  : Colors.black.withOpacity(0.04), // 平时微弱的灰色投影
+              blurRadius: isDragging ? 12 : 8,
+              spreadRadius: isDragging ? 2 : 0,
+              offset: isDragging ? const Offset(0, 6) : const Offset(0, 2),
+            ),
+          ],
+        ),
         child: ContextMenu(
           items: [
             // Simple command with Ctrl+[ shortcut.
@@ -420,23 +445,67 @@ class _BookmarksPageState extends State<BookmarksPage> {
         ),
       );
     }
-    return Container(
-      width: 100,
+    return AnimatedContainer(
+      // 添加动画过渡，让拖拽前后的变化更加丝滑
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      width: 90, // 稍微调整尺寸比例，显得更精致
       height: 100,
-      color: Colors.white.withAlpha(
-        isDragging ? 255 * 0.8.round() : 255 * 0.5.round(),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      decoration: BoxDecoration(
+        // 默认提供一个纯净的背景色，拖拽时微微透明
+        color: isDragging ? Colors.white.withOpacity(0.9) : Colors.white,
+        borderRadius: BorderRadius.circular(16), // 更圆润的倒角（现代APP标配）
+        // 拖拽时显示粉色边框，平时隐藏
+        border: Border.all(
+          color: isDragging ? Colors.pink : Colors.transparent,
+          width: 1.5,
+        ),
+        // 添加柔和的投影，拖拽时投影变大，产生“浮起”的视觉效果
+        boxShadow: [
+          BoxShadow(
+            color: isDragging
+                ? Colors.pink.withOpacity(0.2) // 拖拽时粉色发光投影
+                : Colors.black.withOpacity(0.04), // 平时微弱的灰色投影
+            blurRadius: isDragging ? 12 : 8,
+            spreadRadius: isDragging ? 2 : 0,
+            offset: isDragging ? const Offset(0, 6) : const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.network(e.item.icon, width: 48, height: 48),
-          Text(e.item.name),
-          // 简单提示这里有个子元素（文件夹模式）
-          if (e.children != null && e.children!.isNotEmpty)
-            Text(
-              '(${e.children!.length} items)',
-              style: TextStyle(fontSize: 10),
+          // 图标区域：给图标加一个非常淡的背景圆圈，提升图标的精致度
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.gray.shade50,
+              shape: BoxShape.circle,
             ),
+            child: Image.network(
+              e.item.icon,
+              width: 32,
+              height: 32,
+              fit: BoxFit.cover,
+              // 添加加载失败的备用图标，防止网络图片出错时UI崩溃
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.bookmark, color: Colors.gray, size: 32),
+            ),
+          ),
+          const Spacer(), // 替代 Expanded，把图标和文字优美地推开
+          // 文本区域：限制行数、处理溢出、优化字体样式
+          Text(
+            e.item.name,
+            maxLines: 1, // 限制单行
+            overflow: TextOverflow.ellipsis, // 超出显示省略号
+            style: const TextStyle(
+              color: Color(0xFF4A4A4A), // 使用深灰色而不是纯黑或浅灰，更高级
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.2, // 稍微增加字间距
+            ),
+          ),
         ],
       ),
     );
@@ -445,7 +514,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
   Widget buildChild(List<BookmarkItem> elements) {
     if (elements.length <= 2) {
       var list = elements.map((e) {
-        return Image.network(e.icon, width: 40, height: 40);
+        return Image.network(e.icon, width: 28, height: 28);
       }).toList();
       return Column(
         mainAxisAlignment: .center,
@@ -453,7 +522,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
           Expanded(
             child: Row(mainAxisAlignment: .center, spacing: 8, children: list),
           ),
-          Text('收藏夹'),
+          Text('收藏夹', style: .new(color: Colors.pink)),
         ],
       );
     }
@@ -463,30 +532,32 @@ class _BookmarksPageState extends State<BookmarksPage> {
       return Column(
         mainAxisAlignment: .center,
         crossAxisAlignment: .center,
+        spacing: 8,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: .center,
               mainAxisAlignment: .center,
+              spacing: 4,
               children: [
                 Row(
                   spacing: 8,
                   mainAxisAlignment: .center,
                   children: firstLine.map((e) {
-                    return Image.network(e.icon, width: 32, height: 32);
+                    return Image.network(e.icon, width: 24, height: 24);
                   }).toList(),
                 ),
                 Row(
                   spacing: 8,
                   mainAxisAlignment: .center,
                   children: secondLine.map((e) {
-                    return Image.network(e.icon, width: 32, height: 32);
+                    return Image.network(e.icon, width: 24, height: 24);
                   }).toList(),
                 ),
               ],
             ),
           ),
-          Text('收藏夹'),
+          Text('收藏夹', style: .new(color: Colors.pink)),
         ],
       );
     }
