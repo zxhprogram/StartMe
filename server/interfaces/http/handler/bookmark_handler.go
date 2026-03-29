@@ -1,0 +1,132 @@
+package handler
+
+import (
+	"fmt"
+	"net/http"
+	"server/domain/entity"
+	"server/usecase"
+
+	"github.com/gin-gonic/gin"
+)
+
+type BookmarkHandler struct {
+	bookmarkUsecase *usecase.BookmarkUsecase
+}
+
+func NewBookmarkHandler(uc *usecase.BookmarkUsecase) *BookmarkHandler {
+	return &BookmarkHandler{
+		bookmarkUsecase: uc,
+	}
+}
+
+func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
+	bookmarks, err := h.bookmarkUsecase.GetAllBookmarks()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "failed to get bookmarks",
+			"error":   err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+		"data":    bookmarks,
+	})
+}
+
+func (h *BookmarkHandler) CreateBookmark(c *gin.Context) {
+	var bookmark entity.Bookmark
+	if err := c.ShouldBindJSON(&bookmark); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid request",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name, bookmark.Url, bookmark.Icon)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "save failed",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+		"data":    result,
+	})
+}
+
+func (h *BookmarkHandler) GetBookmarkByID(c *gin.Context) {
+	id := c.Param("id")
+	var uid uint
+	if _, err := fmt.Sscanf(id, "%d", &uid); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid id",
+		})
+		return
+	}
+
+	bookmark, err := h.bookmarkUsecase.GetBookmarkByID(uid)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": "bookmark not found",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+		"data":    bookmark,
+	})
+}
+
+func (h *BookmarkHandler) UpdateBookmark(c *gin.Context) {
+	var bookmark entity.Bookmark
+	if err := c.ShouldBindJSON(&bookmark); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid request",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	if err := h.bookmarkUsecase.UpdateBookmark(&bookmark); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "update failed",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+		"data":    bookmark,
+	})
+}
+
+func (h *BookmarkHandler) DeleteBookmark(c *gin.Context) {
+	id := c.Param("id")
+	var uid uint
+	if _, err := fmt.Sscanf(id, "%d", &uid); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid id",
+		})
+		return
+	}
+
+	if err := h.bookmarkUsecase.DeleteBookmark(uid); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"message": "delete failed",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
+}

@@ -5,6 +5,38 @@ Future<BookmarkListResponse> bookmarkList() async {
   return .fromJson(response.data);
 }
 
+Future<UrlInfoResponse> urlInfo({required String url}) async {
+  var response = await dio.post('/url/info', data: {'url': url});
+  print(response.data);
+  return .fromJson(response.data);
+}
+
+class UrlInfoResponse {
+  String message;
+  UrlInfoData? data;
+  UrlInfoResponse({required this.message, this.data});
+  factory UrlInfoResponse.fromJson(Map<String, dynamic> json) {
+    return .new(
+      message: json['message'],
+      data: json['data'] != null ? UrlInfoData.fromJson(json['data']) : null,
+    );
+  }
+}
+
+class UrlInfoData {
+  String title;
+  String url;
+  String favicon;
+  UrlInfoData({required this.title, required this.url, required this.favicon});
+  factory UrlInfoData.fromJson(Map<String, dynamic> json) {
+    return .new(
+      title: json['title'],
+      url: json['url'],
+      favicon: json['favicon'],
+    );
+  }
+}
+
 class BookmarkListResponse {
   String message;
   List<BookmarkItem> data;

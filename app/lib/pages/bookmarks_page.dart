@@ -1,6 +1,7 @@
 import 'dart:async'; // 引入 Timer
 import 'dart:math';
 import 'package:app/api/bookmark_service_api.dart';
+import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart' show Material;
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -58,6 +59,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
   // 用于备份拖拽事件开始之前的所有的数据
   List<BookmarkItemWithIndex> _backupBookmarks = [];
   final _willMergeItem = signal<WillMergeItem?>(null);
+  final _urlInfo = signal<UrlInfoData?>(null);
+  final _nameController = TextEditingController();
 
   @override
   void initState() {
@@ -117,155 +120,264 @@ class _BookmarksPageState extends State<BookmarksPage> {
     var bookmarks = _bookmarksState.watch(context);
     var willMergeItem = _willMergeItem.watch(context);
 
-    return Scaffold(
-      floatingFooter: true,
-      footers: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Button.text(
-              onPressed: () => context.go('/'),
-              child: const Icon(BootstrapIcons.houseFill, size: 24),
-            ),
-          ],
-        ),
-      ],
-      child: Container(
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            fit: BoxFit.cover,
-            opacity: 0.3,
-            image: const NetworkImage(
-              'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
+    return ContextMenu(
+      items: [
+        MenuButton(
+          trailing: MenuShortcut(
+            activator: SingleActivator(
+              LogicalKeyboardKey.bracketLeft,
+              control: true,
             ),
           ),
+          onPressed: (context) {
+            showDialog(
+              context: context,
+              builder: (context) {
+                var urlInfoResult = _urlInfo.watch(context);
+                final FormController controller = FormController();
+                return AlertDialog(
+                  title: const Text('新增书签'),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('请输入书签名称和 URL'),
+                      const Gap(16),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: Column(
+                          children: [
+                            // Container(width: 60, height: 60, color: Colors.red),
+                            urlInfoResult == null
+                                ? Container()
+                                : Image.network(
+                                    urlInfoResult.favicon,
+                                    width: 60,
+                                    height: 60,
+                                  ),
+                            Form(
+                              controller: controller,
+                              child: FormTableLayout(
+                                rows: [
+                                  FormField<String>(
+                                    key: FormKey(#url),
+                                    label: Text('书签 URL'),
+                                    child: TextField(
+                                      placeholder: Text('请输入书签 URL'),
+                                      autofocus: true,
+                                      onChanged: (value) {
+                                        EasyDebounce.debounce(
+                                          'search-debouncer',
+                                          const Duration(milliseconds: 700),
+                                          () async {
+                                            // var r = await search(currentWord);
+                                            // setState(() {
+                                            //   _currentSuggestions = r.data.map((e) => e.keyword).toList();
+                                            // });
+                                            print('输入了 $value');
+                                            if (value.isEmpty) {
+                                              return;
+                                            } else {
+                                              var r = await urlInfo(url: value);
+                                              _urlInfo.value = r.data;
+                                              _nameController.text =
+                                                  r.data!.title;
+                                            }
+                                          },
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                  FormField<String>(
+                                    key: FormKey(#name),
+                                    label: Text('书签名称'),
+                                    child: TextField(
+                                      placeholder: Text('请输入书签名称'),
+                                      autofocus: false,
+                                      controller: _nameController,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ).withPadding(vertical: 16),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    PrimaryButton(
+                      child: const Text('Save changes'),
+                      onPressed: () {
+                        _nameController.clear();
+                        Navigator.of(context).pop(controller.values);
+                      },
+                    ),
+                  ],
+                );
+              },
+            );
+            _urlInfo.value = null;
+          },
+          child: Row(
+            children: [
+              const Icon(BootstrapIcons.bookmarkPlus),
+              const Gap(4),
+              Text('新增书签'),
+            ],
+          ),
         ),
-        child: Card(
-          fillColor: Colors.transparent,
-          filled: true,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: bookmarks.map((targetItem) {
-              // 给 DragTarget 和 Draggable 指定数据类型
-              return DragTarget<BookmarkItemWithIndex>(
-                // 1. 当有拖拽物移动到自己上方时触发
-                onWillAcceptWithDetails: (details) {
-                  final draggedItem = details.data;
-                  // 不能自己和自己合并/重排
-                  if (draggedItem == targetItem) return false;
+      ],
+      child: Scaffold(
+        floatingFooter: true,
+        footers: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Button.text(
+                onPressed: () => context.go('/'),
+                child: const Icon(BootstrapIcons.houseFill, size: 24),
+              ),
+            ],
+          ),
+        ],
+        child: Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              fit: BoxFit.cover,
+              opacity: 0.3,
+              image: const NetworkImage(
+                'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
+              ),
+            ),
+          ),
+          child: Card(
+            fillColor: Colors.transparent,
+            filled: true,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: bookmarks.map((targetItem) {
+                // 给 DragTarget 和 Draggable 指定数据类型
+                return DragTarget<BookmarkItemWithIndex>(
+                  // 1. 当有拖拽物移动到自己上方时触发
+                  onWillAcceptWithDetails: (details) {
+                    final draggedItem = details.data;
+                    // 不能自己和自己合并/重排
+                    if (draggedItem == targetItem) return false;
 
-                  // 清除旧的定时器
-                  _hoverTimer?.cancel();
+                    // 清除旧的定时器
+                    _hoverTimer?.cancel();
 
-                  // 启动 1 秒定时器
-                  _hoverTimer = Timer(const Duration(seconds: 3), () {
-                    // 如果 1 秒到了，用户还没移开也没松手，触发合并！
-                    _hasMerged = true;
-                    _mergeItems(draggedItem, targetItem);
-                  });
+                    // 启动 1 秒定时器
+                    _hoverTimer = Timer(const Duration(seconds: 3), () {
+                      // 如果 1 秒到了，用户还没移开也没松手，触发合并！
+                      _hasMerged = true;
+                      _mergeItems(draggedItem, targetItem);
+                    });
 
-                  return true; // 告诉框架：我允许接受这个拖拽物
-                },
+                    return true; // 告诉框架：我允许接受这个拖拽物
+                  },
 
-                // 2. 当拖拽物不到1秒就移开时触发
-                onLeave: (data) {
-                  if (_hasMerged) {
-                    print('触发移开逻辑：${targetItem.item.name} 移开 $data');
-                    print('合并被取消，恢复备份数据, 备份数据: $_backupBookmarks');
-                    _bookmarksState.value = _backupBookmarks;
-                    _hasMerged = false;
-                    _willMergeItem.value = null;
-                  }
-
-                  // 取消合并的定时器
-                  _hoverTimer?.cancel();
-                },
-
-                // 3. 当用户在自己上方松手放开时触发
-                onAcceptWithDetails: (details) {
-                  final draggedItem = details.data;
-                  // 松手了，必须马上停掉合并定时器
-                  _hoverTimer?.cancel();
-
-                  // 如果定时器没有执行完1秒（尚未发生合并），说明用户是想重排
-                  if (!_hasMerged) {
-                    _reorderItems(draggedItem, targetItem);
-                  }
-                },
-
-                builder: (context, candidateData, rejectedData) {
-                  // candidateData.isNotEmpty 表示此时有东西悬浮在我头上
-                  bool isHovered = candidateData.isNotEmpty;
-
-                  return Draggable<BookmarkItemWithIndex>(
-                    data: targetItem, // 【重要】把当前数据作为 data 传出去
-
-                    onDragStarted: () {
-                      _backupBookmarks = <BookmarkItemWithIndex>[];
-                      for (var item in _bookmarksState.value) {
-                        _backupBookmarks.add(
-                          .new(item: item.item, children: item.children),
-                        );
-                      }
-                      print('备份数据: $_backupBookmarks');
-
+                  // 2. 当拖拽物不到1秒就移开时触发
+                  onLeave: (data) {
+                    if (_hasMerged) {
+                      print('触发移开逻辑：${targetItem.item.name} 移开 $data');
+                      print('合并被取消，恢复备份数据, 备份数据: $_backupBookmarks');
+                      _bookmarksState.value = _backupBookmarks;
                       _hasMerged = false;
-                    },
+                      _willMergeItem.value = null;
+                    }
 
-                    childWhenDragging: Opacity(
-                      opacity: 0.3, // 拖拽时，原本的位置变成半透明
-                      child: _buildItemUI(e: targetItem, isDragging: false),
-                    ),
-                    feedback: Material(
-                      // 必须包裹 Material 避免拖拽时样式丢失
-                      color: Colors.transparent,
-                      child: _buildItemUI(
-                        e: targetItem,
-                        isDragging: true,
-                        willMergeItem: willMergeItem,
-                      ),
-                    ),
-                    onDragCompleted: () {
-                      print(
-                        '触发拖拽完成逻辑：${targetItem.item.name} and willMergeItem: $willMergeItem',
-                      );
-                      if (willMergeItem != null) {
-                        var targetH = bookmarks[willMergeItem.targetIndex];
-                        (targetH.children ??= []);
-                        if (!targetH.children!.contains(targetItem.item)) {
-                          targetH.children!.add(targetItem.item);
+                    // 取消合并的定时器
+                    _hoverTimer?.cancel();
+                  },
+
+                  // 3. 当用户在自己上方松手放开时触发
+                  onAcceptWithDetails: (details) {
+                    final draggedItem = details.data;
+                    // 松手了，必须马上停掉合并定时器
+                    _hoverTimer?.cancel();
+
+                    // 如果定时器没有执行完1秒（尚未发生合并），说明用户是想重排
+                    if (!_hasMerged) {
+                      _reorderItems(draggedItem, targetItem);
+                    }
+                  },
+
+                  builder: (context, candidateData, rejectedData) {
+                    // candidateData.isNotEmpty 表示此时有东西悬浮在我头上
+                    bool isHovered = candidateData.isNotEmpty;
+
+                    return Draggable<BookmarkItemWithIndex>(
+                      data: targetItem, // 【重要】把当前数据作为 data 传出去
+
+                      onDragStarted: () {
+                        _backupBookmarks = <BookmarkItemWithIndex>[];
+                        for (var item in _bookmarksState.value) {
+                          _backupBookmarks.add(
+                            .new(item: item.item, children: item.children),
+                          );
                         }
-                        var nb = List<BookmarkItemWithIndex>.from(bookmarks);
-                        // 1. 从列表中移除被拖拽的源元素
-                        nb.removeWhere(
-                          (e) => e.item.name == targetItem.item.name,
-                        ); // 建议用唯一ID比较
-                        _bookmarksState.value = nb;
-                        _willMergeItem.value = null;
-                        _backupBookmarks.clear();
-                      }
-                    },
+                        print('备份数据: $_backupBookmarks');
 
-                    // UI渲染，如果是被悬浮状态，可以加个边框或缩放提示用户要合并了
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: isHovered
-                            ? Border.all(color: Colors.blue, width: 2)
-                            : null,
+                        _hasMerged = false;
+                      },
+
+                      childWhenDragging: Opacity(
+                        opacity: 0.3, // 拖拽时，原本的位置变成半透明
+                        child: _buildItemUI(e: targetItem, isDragging: false),
+                      ),
+                      feedback: Material(
+                        // 必须包裹 Material 避免拖拽时样式丢失
                         color: Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        child: _buildItemUI(
+                          e: targetItem,
+                          isDragging: true,
+                          willMergeItem: willMergeItem,
+                        ),
                       ),
-                      child: _buildItemUI(
-                        e: targetItem,
-                        isDragging: false,
-                        willMergeItem: willMergeItem,
+                      onDragCompleted: () {
+                        print(
+                          '触发拖拽完成逻辑：${targetItem.item.name} and willMergeItem: $willMergeItem',
+                        );
+                        if (willMergeItem != null) {
+                          var targetH = bookmarks[willMergeItem.targetIndex];
+                          (targetH.children ??= []);
+                          if (!targetH.children!.contains(targetItem.item)) {
+                            targetH.children!.add(targetItem.item);
+                          }
+                          var nb = List<BookmarkItemWithIndex>.from(bookmarks);
+                          // 1. 从列表中移除被拖拽的源元素
+                          nb.removeWhere(
+                            (e) => e.item.name == targetItem.item.name,
+                          ); // 建议用唯一ID比较
+                          _bookmarksState.value = nb;
+                          _willMergeItem.value = null;
+                          _backupBookmarks.clear();
+                        }
+                      },
+
+                      // UI渲染，如果是被悬浮状态，可以加个边框或缩放提示用户要合并了
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: isHovered
+                              ? Border.all(color: Colors.blue, width: 2)
+                              : null,
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: _buildItemUI(
+                          e: targetItem,
+                          isDragging: false,
+                          willMergeItem: willMergeItem,
+                        ),
                       ),
-                    ),
-                  );
-                },
-              );
-            }).toList(),
+                    );
+                  },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),
