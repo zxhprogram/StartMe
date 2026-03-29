@@ -25,6 +25,16 @@ class BookmarkItemWithIndex {
   String toString() {
     return '{item = $item},children = $children}';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! BookmarkItemWithIndex) return false;
+    return item == other.item;
+  }
+
+  @override
+  int get hashCode => item.hashCode;
 }
 
 class WillMergeItem {
@@ -197,6 +207,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                           .new(item: item.item, children: item.children),
                         );
                       }
+                      print('备份数据: $_backupBookmarks');
 
                       _hasMerged = false;
                     },
@@ -220,7 +231,10 @@ class _BookmarksPageState extends State<BookmarksPage> {
                       );
                       if (willMergeItem != null) {
                         var targetH = bookmarks[willMergeItem.targetIndex];
-                        (targetH.children ??= []).add(targetItem.item);
+                        (targetH.children ??= []);
+                        if (!targetH.children!.contains(targetItem.item)) {
+                          targetH.children!.add(targetItem.item);
+                        }
                         var nb = List<BookmarkItemWithIndex>.from(bookmarks);
                         // 1. 从列表中移除被拖拽的源元素
                         nb.removeWhere(
@@ -268,18 +282,20 @@ class _BookmarksPageState extends State<BookmarksPage> {
         print('合并项：${willMergeItem.item.name}');
         var ccc = e.children ?? [];
         List.from(ccc);
-        ccc.add(willMergeItem.item);
+        if (!ccc.contains(willMergeItem.item)) {
+          ccc.add(willMergeItem.item);
+        }
 
-        var elements = <BookmarkItem>[];
-        elements.add(e.item);
+        var elements = <BookmarkItem>{};
         elements.addAll(ccc);
+        elements.add(e.item);
 
         print('合并后：$elements.length');
         return Container(
           width: 100,
           height: 100,
           color: Colors.pink,
-          child: buildChild(elements),
+          child: buildChild(elements.toList()),
         );
       }
     }

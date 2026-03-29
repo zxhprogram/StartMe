@@ -43,4 +43,14 @@ class BookmarkItem {
   String toString() {
     return '{id = $id,name = $name,url = $url,icon=$icon}';
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! BookmarkItem) return false;
+    return id == other.id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }
