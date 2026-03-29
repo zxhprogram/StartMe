@@ -11,6 +11,53 @@ Future<UrlInfoResponse> urlInfo({required String url}) async {
   return .fromJson(response.data);
 }
 
+Future<SaveBookmarkResponse> saveBookmark({
+  required String name,
+  required String url,
+  required String icon,
+}) async {
+  var response = await dio.post(
+    '/bookmark/save',
+    data: {'name': name, 'url': url, 'icon': icon},
+  );
+  return .fromJson(response.data);
+}
+
+class SaveBookmarkResponse {
+  String message;
+  SaveBookmarkResponseData? data;
+  SaveBookmarkResponse({required this.message, this.data});
+  factory SaveBookmarkResponse.fromJson(Map<String, dynamic> json) {
+    return .new(
+      message: json['message'],
+      data: json['data'] != null
+          ? SaveBookmarkResponseData.fromJson(json['data'])
+          : null,
+    );
+  }
+}
+
+class SaveBookmarkResponseData {
+  int id;
+  String name;
+  String url;
+  String icon;
+  SaveBookmarkResponseData({
+    required this.id,
+    required this.name,
+    required this.url,
+    required this.icon,
+  });
+  factory SaveBookmarkResponseData.fromJson(Map<String, dynamic> json) {
+    return .new(
+      id: json['id'],
+      name: json['name'],
+      url: json['url'],
+      icon: json['icon'],
+    );
+  }
+}
+
 class UrlInfoResponse {
   String message;
   UrlInfoData? data;

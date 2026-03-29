@@ -60,7 +60,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
   List<BookmarkItemWithIndex> _backupBookmarks = [];
   final _willMergeItem = signal<WillMergeItem?>(null);
   final _urlInfo = signal<UrlInfoData?>(null);
-  final _nameController = TextEditingController();
+  final nameController = TextEditingController();
 
   @override
   void initState() {
@@ -170,17 +170,14 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                           'search-debouncer',
                                           const Duration(milliseconds: 700),
                                           () async {
-                                            // var r = await search(currentWord);
-                                            // setState(() {
-                                            //   _currentSuggestions = r.data.map((e) => e.keyword).toList();
-                                            // });
                                             print('输入了 $value');
+                                            // nameController.text = value;
                                             if (value.isEmpty) {
                                               return;
                                             } else {
                                               var r = await urlInfo(url: value);
                                               _urlInfo.value = r.data;
-                                              _nameController.text =
+                                              nameController.text =
                                                   r.data!.title;
                                             }
                                           },
@@ -194,7 +191,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                     child: TextField(
                                       placeholder: Text('请输入书签名称'),
                                       autofocus: false,
-                                      controller: _nameController,
+                                      controller: nameController,
                                     ),
                                   ),
                                 ],
@@ -208,9 +205,43 @@ class _BookmarksPageState extends State<BookmarksPage> {
                   actions: [
                     PrimaryButton(
                       child: const Text('Save changes'),
-                      onPressed: () {
-                        _nameController.clear();
+                      onPressed: () async {
+                        var r = await saveBookmark(
+                          name: controller.values[FormKey(#name)] as String,
+                          url: controller.values[FormKey(#url)] as String,
+                          icon: urlInfoResult?.favicon ?? '',
+                        );
+                        nameController.clear();
                         Navigator.of(context).pop(controller.values);
+                        showDialog(
+                          context: context,
+                          builder: (context) {
+                            return AlertDialog(
+                              title: const Text('Alert title'),
+                              content: const Text(
+                                'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+                              ),
+                              actions: [
+                                // Secondary action to cancel/dismiss.
+                                OutlineButton(
+                                  child: const Text('Cancel'),
+                                  onPressed: () {
+                                    // Close the dialog.
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                                // Primary action to accept/confirm.
+                                PrimaryButton(
+                                  child: const Text('OK'),
+                                  onPressed: () {
+                                    // Close the dialog. In real apps, perform work before closing.
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        );
                       },
                     ),
                   ],
@@ -218,6 +249,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
               },
             );
             _urlInfo.value = null;
+            nameController.clear();
           },
           child: Row(
             children: [
