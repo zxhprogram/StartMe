@@ -60,12 +60,18 @@ class _BookmarksPageState extends State<BookmarksPage> {
   List<BookmarkItemWithIndex> _backupBookmarks = [];
   final _willMergeItem = signal<WillMergeItem?>(null);
   final _urlInfo = signal<UrlInfoData?>(null);
-  final nameController = TextEditingController();
+  late TextEditingController nameController;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    super.dispose();
   }
 
   void _fetchData() async {
@@ -130,6 +136,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
             ),
           ),
           onPressed: (context) {
+            nameController = TextEditingController();
             showDialog(
               context: context,
               builder: (context) {
@@ -211,37 +218,38 @@ class _BookmarksPageState extends State<BookmarksPage> {
                           url: controller.values[FormKey(#url)] as String,
                           icon: urlInfoResult?.favicon ?? '',
                         );
-                        nameController.clear();
-                        Navigator.of(context).pop(controller.values);
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Alert title'),
-                              content: const Text(
-                                'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-                              ),
-                              actions: [
-                                // Secondary action to cancel/dismiss.
-                                OutlineButton(
-                                  child: const Text('Cancel'),
-                                  onPressed: () {
-                                    // Close the dialog.
-                                    Navigator.pop(context);
-                                  },
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Alert title'),
+                                content: const Text(
+                                  'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
                                 ),
-                                // Primary action to accept/confirm.
-                                PrimaryButton(
-                                  child: const Text('OK'),
-                                  onPressed: () {
-                                    // Close the dialog. In real apps, perform work before closing.
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        );
+                                actions: [
+                                  // Secondary action to cancel/dismiss.
+                                  OutlineButton(
+                                    child: const Text('Cancel'),
+                                    onPressed: () {
+                                      // Close the dialog.
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  // Primary action to accept/confirm.
+                                  PrimaryButton(
+                                    child: const Text('OK'),
+                                    onPressed: () {
+                                      // Close the dialog. In real apps, perform work before closing.
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        }
                       },
                     ),
                   ],
