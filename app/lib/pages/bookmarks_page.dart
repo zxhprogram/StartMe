@@ -121,6 +121,120 @@ class _BookmarksPageState extends State<BookmarksPage> {
     _bookmarksState.value = currentList;
   }
 
+  void _saveBookmark(BuildContext context) {
+    nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        var urlInfoResult = _urlInfo.watch(context);
+        final FormController controller = FormController();
+        return AlertDialog(
+          title: const Text('新增书签'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('请输入书签名称和 URL'),
+              const Gap(16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  children: [
+                    // Container(width: 60, height: 60, color: Colors.red),
+                    urlInfoResult == null
+                        ? Container()
+                        : Image.network(
+                            urlInfoResult.favicon,
+                            width: 60,
+                            height: 60,
+                          ),
+                    Form(
+                      controller: controller,
+                      child: FormTableLayout(
+                        rows: [
+                          FormField<String>(
+                            key: FormKey(#url),
+                            label: Text('书签 URL'),
+                            child: TextField(
+                              placeholder: Text('请输入书签 URL'),
+                              autofocus: true,
+                              onChanged: (value) {
+                                EasyDebounce.debounce(
+                                  'search-debouncer',
+                                  const Duration(milliseconds: 700),
+                                  () async {
+                                    print('输入了 $value');
+                                    // nameController.text = value;
+                                    if (value.isEmpty) {
+                                      return;
+                                    } else {
+                                      var r = await urlInfo(url: value);
+                                      _urlInfo.value = r.data;
+                                      nameController.text = r.data!.title;
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          FormField<String>(
+                            key: FormKey(#name),
+                            label: Text('书签名称'),
+                            child: TextField(
+                              placeholder: Text('请输入书签名称'),
+                              autofocus: false,
+                              controller: nameController,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ).withPadding(vertical: 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            PrimaryButton(
+              child: const Text('Save changes'),
+              onPressed: () async {
+                var r = await saveBookmark(
+                  name: controller.values[FormKey(#name)] as String,
+                  url: controller.values[FormKey(#url)] as String,
+                  icon: urlInfoResult?.favicon ?? '',
+                );
+                _fetchData();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('添加书签成功'),
+                        content: Text('添加书签成功 id = ${r.data!.id}}'),
+                        actions: [
+                          PrimaryButton(
+                            child: const Text('OK'),
+                            onPressed: () {
+                              // Close the dialog. In real apps, perform work before closing.
+                              Navigator.pop(context);
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+    _urlInfo.value = null;
+    nameController.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     var bookmarks = _bookmarksState.watch(context);
@@ -135,130 +249,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
               control: true,
             ),
           ),
-          onPressed: (context) {
-            nameController = TextEditingController();
-            showDialog(
-              context: context,
-              builder: (context) {
-                var urlInfoResult = _urlInfo.watch(context);
-                final FormController controller = FormController();
-                return AlertDialog(
-                  title: const Text('新增书签'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('请输入书签名称和 URL'),
-                      const Gap(16),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: Column(
-                          children: [
-                            // Container(width: 60, height: 60, color: Colors.red),
-                            urlInfoResult == null
-                                ? Container()
-                                : Image.network(
-                                    urlInfoResult.favicon,
-                                    width: 60,
-                                    height: 60,
-                                  ),
-                            Form(
-                              controller: controller,
-                              child: FormTableLayout(
-                                rows: [
-                                  FormField<String>(
-                                    key: FormKey(#url),
-                                    label: Text('书签 URL'),
-                                    child: TextField(
-                                      placeholder: Text('请输入书签 URL'),
-                                      autofocus: true,
-                                      onChanged: (value) {
-                                        EasyDebounce.debounce(
-                                          'search-debouncer',
-                                          const Duration(milliseconds: 700),
-                                          () async {
-                                            print('输入了 $value');
-                                            // nameController.text = value;
-                                            if (value.isEmpty) {
-                                              return;
-                                            } else {
-                                              var r = await urlInfo(url: value);
-                                              _urlInfo.value = r.data;
-                                              nameController.text =
-                                                  r.data!.title;
-                                            }
-                                          },
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  FormField<String>(
-                                    key: FormKey(#name),
-                                    label: Text('书签名称'),
-                                    child: TextField(
-                                      placeholder: Text('请输入书签名称'),
-                                      autofocus: false,
-                                      controller: nameController,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ).withPadding(vertical: 16),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    PrimaryButton(
-                      child: const Text('Save changes'),
-                      onPressed: () async {
-                        var r = await saveBookmark(
-                          name: controller.values[FormKey(#name)] as String,
-                          url: controller.values[FormKey(#url)] as String,
-                          icon: urlInfoResult?.favicon ?? '',
-                        );
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          showDialog(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Alert title'),
-                                content: const Text(
-                                  'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-                                ),
-                                actions: [
-                                  // Secondary action to cancel/dismiss.
-                                  OutlineButton(
-                                    child: const Text('Cancel'),
-                                    onPressed: () {
-                                      // Close the dialog.
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                  // Primary action to accept/confirm.
-                                  PrimaryButton(
-                                    child: const Text('OK'),
-                                    onPressed: () {
-                                      // Close the dialog. In real apps, perform work before closing.
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                );
-              },
-            );
-            _urlInfo.value = null;
-            nameController.clear();
-          },
+          onPressed: _saveBookmark,
           child: Row(
             children: [
               const Icon(BootstrapIcons.bookmarkPlus),
