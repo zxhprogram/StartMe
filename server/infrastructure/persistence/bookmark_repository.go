@@ -19,6 +19,10 @@ func (r *BookmarkRepositoryImpl) Create(bookmark *entity.Bookmark) error {
 	return r.db.Create(bookmark).Error
 }
 
+func (r *BookmarkRepositoryImpl) CreateBookItem(bookmarkItem *entity.BookmarkItem) error {
+	return r.db.Create(bookmarkItem).Error
+}
+
 func (r *BookmarkRepositoryImpl) FindAll() ([]entity.Bookmark, error) {
 	var bookmarks []entity.Bookmark
 	result := r.db.Find(&bookmarks)

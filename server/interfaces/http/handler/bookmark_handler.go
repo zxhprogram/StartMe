@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"server/domain/entity"
+	"server/interfaces/http/req"
 	"server/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +36,7 @@ func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
 }
 
 func (h *BookmarkHandler) CreateBookmark(c *gin.Context) {
-	var bookmark entity.Bookmark
+	var bookmark req.BookmarkRequest
 	if err := c.ShouldBindJSON(&bookmark); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "invalid request",
@@ -43,19 +44,48 @@ func (h *BookmarkHandler) CreateBookmark(c *gin.Context) {
 		})
 		return
 	}
+	if bookmark.Type == "" || bookmark.Type == "bookmark" {
+		result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "save failed",
+				"error":   err.Error(),
+			})
+			return
+		}
 
-	result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name, bookmark.Url, bookmark.Icon)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"message": "save failed",
-			"error":   err.Error(),
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+			"data":    result,
+		})
+		return
+	}
+	if bookmark.Type == "folder" {
+		result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "save failed",
+				"error":   err.Error(),
+			})
+			return
+		}
+		itemResult, err := h.bookmarkUsecase.CreateBookmarkItem(bookmark.Name, bookmark.Url, bookmark.Icon, result.Id)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"message": "save failed",
+				"error":   err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+			"data":    itemResult,
 		})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "ok",
-		"data":    result,
+		"message": "fail,unrecognize bookmark type",
 	})
 }
 

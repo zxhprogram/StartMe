@@ -15,16 +15,28 @@ func NewBookmarkUsecase(repo repository.BookmarkRepository) *BookmarkUsecase {
 	}
 }
 
-func (u *BookmarkUsecase) CreateBookmark(name, url, icon string) (*entity.Bookmark, error) {
+func (u *BookmarkUsecase) CreateBookmark(name string) (*entity.Bookmark, error) {
 	bookmark := &entity.Bookmark{
 		Name: name,
-		Url:  url,
-		Icon: icon,
+		Type: "bookmark",
 	}
 	if err := u.bookmarkRepo.Create(bookmark); err != nil {
 		return nil, err
 	}
 	return bookmark, nil
+}
+
+func (u *BookmarkUsecase) CreateBookmarkItem(name, url, icon string, parentId uint) (*entity.BookmarkItem, error) {
+	bookmarkItem := &entity.BookmarkItem{
+		Name:     name,
+		Url:      url,
+		Icon:     icon,
+		ParentId: parentId,
+	}
+	if err := u.bookmarkRepo.CreateBookItem(bookmarkItem); err != nil {
+		return nil, err
+	}
+	return bookmarkItem, nil
 }
 
 func (u *BookmarkUsecase) GetAllBookmarks() ([]entity.Bookmark, error) {
