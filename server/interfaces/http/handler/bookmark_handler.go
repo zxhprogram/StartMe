@@ -45,7 +45,8 @@ func (h *BookmarkHandler) CreateBookmark(c *gin.Context) {
 		return
 	}
 	if bookmark.Type == "" || bookmark.Type == "bookmark" {
-		result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name)
+		bookmark.Type = "bookmark"
+		_, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name, bookmark.Type)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "save failed",
@@ -53,15 +54,15 @@ func (h *BookmarkHandler) CreateBookmark(c *gin.Context) {
 			})
 			return
 		}
-
+		itemResult, err := h.bookmarkUsecase.CreateBookmarkItem(bookmark.Name, bookmark.Url, bookmark.Icon, 0)
 		c.JSON(http.StatusOK, gin.H{
 			"message": "ok",
-			"data":    result,
+			"data":    *itemResult,
 		})
 		return
 	}
 	if bookmark.Type == "folder" {
-		result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name)
+		result, err := h.bookmarkUsecase.CreateBookmark(bookmark.Name, bookmark.Type)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"message": "save failed",
@@ -69,17 +70,21 @@ func (h *BookmarkHandler) CreateBookmark(c *gin.Context) {
 			})
 			return
 		}
-		itemResult, err := h.bookmarkUsecase.CreateBookmarkItem(bookmark.Name, bookmark.Url, bookmark.Icon, result.Id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"message": "save failed",
-				"error":   err.Error(),
-			})
-			return
+		var itemResultList []entity.BookmarkItem
+		for _, item := range bookmark.Children {
+			itemResult, err := h.bookmarkUsecase.CreateBookmarkItem(item.Name, item.Url, item.Icon, result.Id)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"message": "save failed",
+					"error":   err.Error(),
+				})
+				return
+			}
+			itemResultList = append(itemResultList, *itemResult)
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"message": "ok",
-			"data":    itemResult,
+			"data":    itemResultList,
 		})
 		return
 	}

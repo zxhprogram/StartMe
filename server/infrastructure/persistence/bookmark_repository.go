@@ -3,6 +3,7 @@ package persistence
 import (
 	"server/domain/entity"
 	"server/domain/repository"
+	"server/interfaces/http/res"
 
 	"gorm.io/gorm"
 )
@@ -23,10 +24,18 @@ func (r *BookmarkRepositoryImpl) CreateBookItem(bookmarkItem *entity.BookmarkIte
 	return r.db.Create(bookmarkItem).Error
 }
 
-func (r *BookmarkRepositoryImpl) FindAll() ([]entity.Bookmark, error) {
-	var bookmarks []entity.Bookmark
-	result := r.db.Find(&bookmarks)
-	return bookmarks, result.Error
+func (r *BookmarkRepositoryImpl) FindAll() ([]res.BookmarkResponse, error) {
+	//执行sql语句查询结果，对结果处理封装
+	var bookmarks []res.BookmarkResponse
+	result := r.db.Raw("SELECT b.name as folderName,b.type,i.id,i.name,i.url,i.icon,i.parent_id FROM bookmarks b INNER JOIN bookmark_items i on b.id = i.parent_id where b.type = 'folder'").Scan(&bookmarks)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return []res.BookmarkResponse{}, nil
+	}
+
+	return bookmarks, nil
 }
 
 func (r *BookmarkRepositoryImpl) FindByID(id uint) (*entity.Bookmark, error) {

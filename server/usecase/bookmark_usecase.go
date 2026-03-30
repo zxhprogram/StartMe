@@ -3,6 +3,7 @@ package usecase
 import (
 	"server/domain/entity"
 	"server/domain/repository"
+	"server/interfaces/http/res"
 )
 
 type BookmarkUsecase struct {
@@ -15,10 +16,10 @@ func NewBookmarkUsecase(repo repository.BookmarkRepository) *BookmarkUsecase {
 	}
 }
 
-func (u *BookmarkUsecase) CreateBookmark(name string) (*entity.Bookmark, error) {
+func (u *BookmarkUsecase) CreateBookmark(name, itemType string) (*entity.Bookmark, error) {
 	bookmark := &entity.Bookmark{
 		Name: name,
-		Type: "bookmark",
+		Type: itemType,
 	}
 	if err := u.bookmarkRepo.Create(bookmark); err != nil {
 		return nil, err
@@ -39,7 +40,7 @@ func (u *BookmarkUsecase) CreateBookmarkItem(name, url, icon string, parentId ui
 	return bookmarkItem, nil
 }
 
-func (u *BookmarkUsecase) GetAllBookmarks() ([]entity.Bookmark, error) {
+func (u *BookmarkUsecase) GetAllBookmarks() ([]res.BookmarkResponse, error) {
 	return u.bookmarkRepo.FindAll()
 }
 
