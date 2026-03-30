@@ -8,6 +8,8 @@ import (
 	"server/usecase"
 
 	"github.com/gin-gonic/gin"
+	//添加跨域
+	"github.com/gin-contrib/cors"
 )
 
 func main() {
@@ -28,6 +30,8 @@ func main() {
 	router := http.NewRouter(bookmarkHandler, urlInfoHandler, searchHandler)
 
 	r := gin.Default()
+	//添加跨域
+	r.Use(cors.Default())
 
 	router.SetupRoutes(r)
 
