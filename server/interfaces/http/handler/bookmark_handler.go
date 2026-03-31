@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"server/domain/entity"
 	"server/interfaces/http/req"
+	"server/interfaces/http/res"
 	"server/usecase"
 
 	"github.com/gin-gonic/gin"
@@ -20,8 +21,52 @@ func NewBookmarkHandler(uc *usecase.BookmarkUsecase) *BookmarkHandler {
 	}
 }
 
+type B struct {
+	Id         uint                   `json:"id"`
+	FolderName string                 `json:"folderName"`
+	Name       string                 `json:"name"`
+	Url        string                 `json:"url"`
+	Icon       string                 `json:"icon"`
+	ParentId   uint                   `json:"parentId"`
+	Type       string                 `json:"type"`
+	Children   []res.BookmarkResponse `json:"children"`
+}
+
 func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
 	bookmarks, err := h.bookmarkUsecase.GetAllBookmarks()
+	var m = make(map[uint][]res.BookmarkResponse)
+	for _, item := range bookmarks {
+		if m[item.ParentId] == nil {
+			m[item.ParentId] = []res.BookmarkResponse{}
+		}
+		m[item.ParentId] = append(m[item.ParentId], item)
+	}
+	var rrrr []B
+	for _, v := range m {
+		if len(v) == 1 {
+			rrrr = append(rrrr, B{
+				Id:         v[0].Id,
+				FolderName: "",
+				Name:       v[0].Name,
+				Url:        v[0].Url,
+				Icon:       v[0].Icon,
+				ParentId:   0,
+				Type:       "bookmark",
+			})
+		}
+		if len(v) > 1 {
+			var bb = B{
+				FolderName: v[0].FolderName,
+				ParentId:   v[0].ParentId,
+				Children:   []res.BookmarkResponse{},
+			}
+			for _, _vv := range v {
+				bb.Children = append(bb.Children, _vv)
+			}
+			rrrr = append(rrrr, bb)
+		}
+	}
+	fmt.Println(m)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"message": "failed to get bookmarks",
@@ -31,7 +76,7 @@ func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "ok",
-		"data":    bookmarks,
+		"data":    rrrr,
 	})
 }
 

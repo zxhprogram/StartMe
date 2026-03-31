@@ -626,20 +626,25 @@ class _BookmarksPageState extends State<BookmarksPage> {
               color: Colors.gray.shade50,
               shape: BoxShape.circle,
             ),
-            child: Image.network(
-              e.item.icon,
-              width: 32,
-              height: 32,
-              fit: BoxFit.cover,
-              // 添加加载失败的备用图标，防止网络图片出错时UI崩溃
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.bookmark, color: Colors.gray, size: 32),
-            ),
+            child: e.item.children == null
+                ? Image.network(
+                    e.item.icon,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    // 添加加载失败的备用图标，防止网络图片出错时UI崩溃
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.bookmark,
+                      color: Colors.gray,
+                      size: 32,
+                    ),
+                  )
+                : _childrenWidgets(e.item.children!),
           ),
           const Spacer(), // 替代 Expanded，把图标和文字优美地推开
           // 文本区域：限制行数、处理溢出、优化字体样式
           Text(
-            e.item.name,
+            e.item.name.isEmpty ? e.item.folderName : e.item.name,
             maxLines: 1, // 限制单行
             overflow: TextOverflow.ellipsis, // 超出显示省略号
             style: const TextStyle(
@@ -651,6 +656,33 @@ class _BookmarksPageState extends State<BookmarksPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _childrenWidgets(List<BookmarkItem> children) {
+    if (children.length <= 2) {
+      return Row(
+        children: children
+            .map((e) => Image.network(e.icon, width: 30, height: 30))
+            .toList(),
+      );
+    }
+
+    var firstLine = children.sublist(0, 2);
+    var secondLine = children.sublist(2, min(children.length, 4));
+    return Column(
+      children: [
+        Row(
+          children: firstLine
+              .map((e) => Image.network(e.icon, width: 30, height: 30))
+              .toList(),
+        ),
+        Row(
+          children: secondLine
+              .map((e) => Image.network(e.icon, width: 30, height: 30))
+              .toList(),
+        ),
+      ],
     );
   }
 

@@ -100,21 +100,37 @@ class BookmarkListResponse {
 
 class BookmarkItem {
   int id;
+  String folderName;
   String name;
   String url;
   String icon;
+  int parentId;
+  String type;
+  List<BookmarkItem>? children;
   BookmarkItem({
     required this.id,
     required this.name,
     required this.url,
     required this.icon,
+    required this.folderName,
+    required this.parentId,
+    required this.type,
+    this.children,
   });
   factory BookmarkItem.fromJson(Map<String, dynamic> json) {
     return .new(
       id: json['id'],
+      folderName: json['folderName'],
       name: json['name'],
       url: json['url'],
       icon: json['icon'],
+      parentId: json['parentId'],
+      type: json['type'],
+      children: json['children'] == null
+          ? null
+          : (json['children'] as List<dynamic>)
+                .map((e) => BookmarkItem.fromJson(e))
+                .toList(),
     );
   }
 
