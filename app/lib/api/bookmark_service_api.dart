@@ -20,6 +20,7 @@ Future<SaveBookmarkResponse> saveBookmark({
     '/bookmark/save',
     data: {'name': name, 'url': url, 'icon': icon},
   );
+  print(response.data);
   return .fromJson(response.data);
 }
 
@@ -42,11 +43,13 @@ class SaveBookmarkResponseData {
   String name;
   String url;
   String icon;
+  int parentId;
   SaveBookmarkResponseData({
     required this.id,
     required this.name,
     required this.url,
     required this.icon,
+    required this.parentId,
   });
   factory SaveBookmarkResponseData.fromJson(Map<String, dynamic> json) {
     return .new(
@@ -54,6 +57,7 @@ class SaveBookmarkResponseData {
       name: json['name'],
       url: json['url'],
       icon: json['icon'],
+      parentId: json['parent_id'],
     );
   }
 }
@@ -91,9 +95,11 @@ class BookmarkListResponse {
   factory BookmarkListResponse.fromJson(Map<String, dynamic> json) {
     return .new(
       message: json['message'],
-      data: (json['data'] as List<dynamic>)
-          .map((e) => BookmarkItem.fromJson(e))
-          .toList(),
+      data: json['data'] == null
+          ? []
+          : (json['data'] as List<dynamic>)
+                .map((e) => BookmarkItem.fromJson(e))
+                .toList(),
     );
   }
 }

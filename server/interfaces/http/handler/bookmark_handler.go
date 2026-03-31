@@ -35,11 +35,16 @@ type B struct {
 func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
 	bookmarks, err := h.bookmarkUsecase.GetAllBookmarks()
 	var m = make(map[uint][]res.BookmarkResponse)
+	var nonFolderBookmarks []res.BookmarkResponse
 	for _, item := range bookmarks {
-		if m[item.ParentId] == nil {
-			m[item.ParentId] = []res.BookmarkResponse{}
+		if item.ParentId == 0 {
+			nonFolderBookmarks = append(nonFolderBookmarks, item)
+		} else {
+			if m[item.ParentId] == nil {
+				m[item.ParentId] = []res.BookmarkResponse{}
+			}
+			m[item.ParentId] = append(m[item.ParentId], item)
 		}
-		m[item.ParentId] = append(m[item.ParentId], item)
 	}
 	var rrrr []B
 	for _, v := range m {
@@ -65,6 +70,17 @@ func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
 			}
 			rrrr = append(rrrr, bb)
 		}
+	}
+	for _, item := range nonFolderBookmarks {
+		rrrr = append(rrrr, B{
+			Id:         item.Id,
+			FolderName: "",
+			Name:       item.Name,
+			Url:        item.Url,
+			Icon:       item.Icon,
+			ParentId:   0,
+			Type:       "bookmark",
+		})
 	}
 	fmt.Println(m)
 	if err != nil {

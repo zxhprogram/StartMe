@@ -60,7 +60,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
   List<BookmarkItemWithIndex> _backupBookmarks = [];
   final _willMergeItem = signal<WillMergeItem?>(null);
   final _urlInfo = signal<UrlInfoData?>(null);
-  late TextEditingController nameController;
+  late TextEditingController nameController = TextEditingController();
 
   @override
   void initState() {

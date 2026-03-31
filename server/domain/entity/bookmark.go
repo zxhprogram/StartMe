@@ -7,9 +7,9 @@ type Bookmark struct {
 }
 
 type BookmarkItem struct {
-	Id       uint `gorm:"primaryKey"`
-	Name     string
-	Url      string
-	Icon     string
-	ParentId uint
+	Id       uint   `json:"id" gorm:"primaryKey"`
+	Name     string `json:"name"`
+	Url      string `json:"url"`
+	Icon     string `json:"icon"`
+	ParentId uint   `json:"parent_id"`
 }
