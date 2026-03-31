@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"fmt"
 	"server/domain/entity"
 	"server/domain/repository"
 	"server/interfaces/http/res"
@@ -31,11 +32,17 @@ func (r *BookmarkRepositoryImpl) FindAll() ([]res.BookmarkResponse, error) {
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	if result.RowsAffected == 0 {
+	var nonFolderBookmarks []res.BookmarkResponse
+	newResult := r.db.Raw("SELECT *,'bookmark' type FROM bookmark_items WHERE parent_id = 0").Scan(&nonFolderBookmarks)
+	fmt.Println(len(nonFolderBookmarks))
+	if newResult.Error != nil {
+		return nil, result.Error
+	}
+	totalResult := append(bookmarks, nonFolderBookmarks...)
+	if len(totalResult) == 0 {
 		return []res.BookmarkResponse{}, nil
 	}
-
-	return bookmarks, nil
+	return totalResult, nil
 }
 
 func (r *BookmarkRepositoryImpl) FindByID(id uint) (*entity.Bookmark, error) {
