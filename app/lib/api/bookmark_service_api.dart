@@ -11,53 +11,52 @@ Future<UrlInfoResponse> urlInfo({required String url}) async {
   return .fromJson(response.data);
 }
 
-Future<SaveBookmarkResponse> saveBookmark({
+Future<CreateBookmarkGroupResponse> createBookmarkGroup({
   required String name,
   required String url,
   required String icon,
 }) async {
   var response = await dio.post(
-    '/bookmark/save',
+    '/bookmark/createGroup',
     data: {'name': name, 'url': url, 'icon': icon},
   );
-  print(response.data);
   return .fromJson(response.data);
 }
 
-class SaveBookmarkResponse {
+class CreateBookmarkGroupResponse {
   String message;
-  SaveBookmarkResponseData? data;
-  SaveBookmarkResponse({required this.message, this.data});
-  factory SaveBookmarkResponse.fromJson(Map<String, dynamic> json) {
+  CreateBookmarkGroupResponseData? data;
+  CreateBookmarkGroupResponse({required this.message, this.data});
+  factory CreateBookmarkGroupResponse.fromJson(Map<String, dynamic> json) {
     return .new(
       message: json['message'],
       data: json['data'] != null
-          ? SaveBookmarkResponseData.fromJson(json['data'])
+          ? CreateBookmarkGroupResponseData.fromJson(json['data'])
           : null,
     );
   }
 }
 
-class SaveBookmarkResponseData {
+class CreateBookmarkGroupResponseData {
   int id;
   String name;
   String url;
   String icon;
-  int parentId;
-  SaveBookmarkResponseData({
+  int groupId;
+  CreateBookmarkGroupResponseData({
     required this.id,
     required this.name,
     required this.url,
     required this.icon,
-    required this.parentId,
+    required this.groupId,
   });
-  factory SaveBookmarkResponseData.fromJson(Map<String, dynamic> json) {
+  factory CreateBookmarkGroupResponseData.fromJson(Map<String, dynamic> json) {
     return .new(
       id: json['id'],
       name: json['name'],
       url: json['url'],
       icon: json['icon'],
-      parentId: json['parent_id'],
+      groupId: json['groupId'],
     );
   }
 }
@@ -90,7 +89,7 @@ class UrlInfoData {
 
 class BookmarkListResponse {
   String message;
-  List<BookmarkItem> data;
+  List<BookmarkGroup> data;
   BookmarkListResponse({required this.message, required this.data});
   factory BookmarkListResponse.fromJson(Map<String, dynamic> json) {
     return .new(
@@ -98,6 +97,29 @@ class BookmarkListResponse {
       data: json['data'] == null
           ? []
           : (json['data'] as List<dynamic>)
+                .map((e) => BookmarkGroup.fromJson(e))
+                .toList(),
+    );
+  }
+}
+
+class BookmarkGroup {
+  int groupId;
+  String groupName;
+  List<BookmarkItem> items;
+
+  BookmarkGroup({
+    required this.groupId,
+    required this.groupName,
+    required this.items,
+  });
+  factory BookmarkGroup.fromJson(Map<String, dynamic> json) {
+    return .new(
+      groupId: json['groupId'],
+      groupName: json['groupName'],
+      items: json['bookmarkList'] == null
+          ? []
+          : (json['bookmarkList'] as List<dynamic>)
                 .map((e) => BookmarkItem.fromJson(e))
                 .toList(),
     );
@@ -105,53 +127,53 @@ class BookmarkListResponse {
 }
 
 class BookmarkItem {
-  int id;
-  String folderName;
-  String name;
+  int bookmarkId;
+  String bookmarkName;
   String url;
   String icon;
-  int parentId;
-  String type;
-  List<BookmarkItem>? children;
+  int groupId;
   BookmarkItem({
-    required this.id,
-    required this.name,
+    required this.bookmarkId,
+    required this.bookmarkName,
     required this.url,
     required this.icon,
-    required this.folderName,
-    required this.parentId,
-    required this.type,
-    this.children,
+    required this.groupId,
   });
   factory BookmarkItem.fromJson(Map<String, dynamic> json) {
     return .new(
-      id: json['id'],
-      folderName: json['folderName'],
-      name: json['name'],
+      bookmarkId: json['bookmarkId'],
+      bookmarkName: json['bookmarkName'],
       url: json['url'],
       icon: json['icon'],
-      parentId: json['parentId'],
-      type: json['type'],
-      children: json['children'] == null
-          ? null
-          : (json['children'] as List<dynamic>)
-                .map((e) => BookmarkItem.fromJson(e))
-                .toList(),
+      groupId: json['groupId'],
     );
   }
 
-  @override
-  String toString() {
-    return '{id = $id,name = $name,url = $url,icon=$icon}';
+  Map<String, dynamic> toJson() {
+    return {'id': bookmarkId, 'name': bookmarkName, 'url': url, 'icon': icon};
   }
+}
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! BookmarkItem) return false;
-    return id == other.id;
+Future<UpdateBookmarkGroupResponse> updateBookmarkGroup({
+  required int groupId,
+  required String groupName,
+  required List<BookmarkItem> items,
+}) async {
+  var response = await dio.post(
+    '/bookmark/updateGroup',
+    data: {
+      'id': groupId,
+      'name': groupName,
+      'items': items.map((e) => e.toJson()).toList(),
+    },
+  );
+  return .fromJson(response.data);
+}
+
+class UpdateBookmarkGroupResponse {
+  String message;
+  UpdateBookmarkGroupResponse({required this.message});
+  factory UpdateBookmarkGroupResponse.fromJson(Map<String, dynamic> json) {
+    return .new(message: json['message']);
   }
-
-  @override
-  int get hashCode => id.hashCode;
 }

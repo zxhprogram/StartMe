@@ -15,50 +15,17 @@ class BookmarksPage extends StatefulWidget {
   State<BookmarksPage> createState() => _BookmarksPageState();
 }
 
-class BookmarkItemWithIndex {
-  BookmarkItem item;
-
-  // 假定你可能需要一个字段来存储它内部是不是包含了多个书签（文件夹模式）
-  List<BookmarkItem>? children;
-
-  BookmarkItemWithIndex({required this.item, this.children});
-
-  @override
-  String toString() {
-    return '{item = $item},children = $children}';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    if (other is! BookmarkItemWithIndex) return false;
-    return item == other.item;
-  }
-
-  @override
-  int get hashCode => item.hashCode;
-}
-
-class WillMergeItem {
-  int targetIndex;
-  BookmarkItem item;
-  WillMergeItem({required this.targetIndex, required this.item});
-  @override
-  String toString() {
-    return '{targetIndex = $targetIndex,item = $item}';
-  }
-}
-
 class _BookmarksPageState extends State<BookmarksPage> {
-  final _bookmarksState = signal<List<BookmarkItemWithIndex>>([]);
+  final _bookmarksState = signal<List<BookmarkGroup>>([]);
 
   // 用于控制 1 秒悬浮的定时器
   Timer? _hoverTimer;
   // 用于标记本次拖拽是否已经触发了合并，防止松手时又触发重排
   bool _hasMerged = false;
   // 用于备份拖拽事件开始之前的所有的数据
-  List<BookmarkItemWithIndex> _backupBookmarks = [];
-  final _willMergeItem = signal<WillMergeItem?>(null);
+  List<BookmarkGroup> _backupBookmarks = [];
+  final _willMergeItem = signal<BookmarkGroup?>(null);
+  final _mergeTarget = signal<BookmarkGroup?>(null);
   final _urlInfo = signal<UrlInfoData?>(null);
   late TextEditingController nameController = TextEditingController();
 
@@ -76,39 +43,36 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   void _fetchData() async {
     var r = await bookmarkList();
-    _bookmarksState.value = r.data
-        .map((e) => BookmarkItemWithIndex(item: e))
-        .toList();
+    _bookmarksState.value = r.data.where((e) => e.items.isNotEmpty).toList();
   }
 
   // ==== 核心业务逻辑：合并 ====
-  void _mergeItems(BookmarkItemWithIndex source, BookmarkItemWithIndex target) {
-    print('触发合并逻辑：${source.item.name} 合并到 ${target.item.name}');
+  void _mergeItems(BookmarkGroup source, BookmarkGroup target) {
+    print('触发合并逻辑：${source.groupName} 合并到 ${target.groupName}');
 
-    var currentList = List<BookmarkItemWithIndex>.from(_bookmarksState.value);
+    var currentList = List<BookmarkGroup>.from(_bookmarksState.value);
     var targetIndex = currentList.indexWhere(
-      (e) => e.item.name == target.item.name,
+      (e) => e.groupId == target.groupId,
     );
     if (targetIndex != -1) {
-      _willMergeItem.value = WillMergeItem(
-        targetIndex: targetIndex,
-        item: source.item,
-      );
+      _willMergeItem.value = source;
+      _mergeTarget.value = target;
     }
   }
 
   // ==== 核心业务逻辑：排序 ====
-  void _reorderItems(
-    BookmarkItemWithIndex source,
-    BookmarkItemWithIndex target,
-  ) {
-    print('触发重排逻辑：${source.item.name} 移动到 ${target.item.name}');
+  void _reorderItems(BookmarkGroup source, BookmarkGroup target) async {
+    print('触发重排逻辑：${source.groupName} 移动到 ${target.groupName}');
 
-    var currentList = List<BookmarkItemWithIndex>.from(_bookmarksState.value);
+    var currentList = List<BookmarkGroup>.from(_bookmarksState.value);
 
     // 1. 获取两者的当前真实索引
-    int sourceIndex = currentList.indexOf(source);
-    int targetIndex = currentList.indexOf(target);
+    int sourceIndex = currentList.indexWhere(
+      (e) => e.groupId == source.groupId,
+    );
+    int targetIndex = currentList.indexWhere(
+      (e) => e.groupId == target.groupId,
+    );
 
     if (sourceIndex == -1 || targetIndex == -1) return;
 
@@ -119,6 +83,17 @@ class _BookmarksPageState extends State<BookmarksPage> {
     currentList.insert(targetIndex, removedItem);
 
     _bookmarksState.value = currentList;
+
+    // 4. 调用 API 保存新的顺序（通过更新所有组的名称来触发后端保存顺序，或者需要后端提供专门的排序接口）
+    // 这里我们逐个更新组的位置信息
+    for (int i = 0; i < currentList.length; i++) {
+      var group = currentList[i];
+      await updateBookmarkGroup(
+        groupId: group.groupId,
+        groupName: group.groupName,
+        items: group.items,
+      );
+    }
   }
 
   void _saveBookmark(BuildContext context) {
@@ -198,7 +173,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
             PrimaryButton(
               child: const Text('Save changes'),
               onPressed: () async {
-                var r = await saveBookmark(
+                var r = await createBookmarkGroup(
                   name: controller.values[FormKey(#name)] as String,
                   url: controller.values[FormKey(#url)] as String,
                   icon: urlInfoResult?.favicon ?? '',
@@ -210,8 +185,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     context: context,
                     builder: (context) {
                       return AlertDialog(
-                        title: const Text('添加书签成功'),
-                        content: Text('添加书签成功 id = ${r.data!.id}}'),
+                        title: const Text('添加书签组成功'),
+                        content: Text('添加书签组成功 id = ${r.data!.groupId}'),
                         actions: [
                           PrimaryButton(
                             child: const Text('OK'),
@@ -239,6 +214,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
   Widget build(BuildContext context) {
     var bookmarks = _bookmarksState.watch(context);
     var willMergeItem = _willMergeItem.watch(context);
+    var mergeTarget = _mergeTarget.watch(context);
 
     return ContextMenu(
       items: [
@@ -290,7 +266,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
               runSpacing: 8,
               children: bookmarks.map((targetItem) {
                 // 给 DragTarget 和 Draggable 指定数据类型
-                return DragTarget<BookmarkItemWithIndex>(
+                return DragTarget<BookmarkGroup>(
                   // 1. 当有拖拽物移动到自己上方时触发
                   onWillAcceptWithDetails: (details) {
                     final draggedItem = details.data;
@@ -300,9 +276,9 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     // 清除旧的定时器
                     _hoverTimer?.cancel();
 
-                    // 启动 1 秒定时器
+                    // 启动 3 秒定时器
                     _hoverTimer = Timer(const Duration(seconds: 3), () {
-                      // 如果 1 秒到了，用户还没移开也没松手，触发合并！
+                      // 如果 3 秒到了，用户还没移开也没松手，触发合并预览！
                       _hasMerged = true;
                       _mergeItems(draggedItem, targetItem);
                     });
@@ -310,14 +286,16 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     return true; // 告诉框架：我允许接受这个拖拽物
                   },
 
-                  // 2. 当拖拽物不到1秒就移开时触发
+                  // 2. 当拖拽物不到3秒就移开时触发
                   onLeave: (data) {
-                    if (_hasMerged) {
-                      print('触发移开逻辑：${targetItem.item.name} 移开 $data');
+                    // 如果已经触发了合并预览（_willMergeItem 不为空），则恢复备份
+                    if (_willMergeItem.value != null) {
+                      print('触发移开逻辑：${targetItem.groupName} 移开 $data');
                       print('合并被取消，恢复备份数据, 备份数据: $_backupBookmarks');
                       _bookmarksState.value = _backupBookmarks;
                       _hasMerged = false;
                       _willMergeItem.value = null;
+                      _mergeTarget.value = null;
                     }
 
                     // 取消合并的定时器
@@ -330,7 +308,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     // 松手了，必须马上停掉合并定时器
                     _hoverTimer?.cancel();
 
-                    // 如果定时器没有执行完1秒（尚未发生合并），说明用户是想重排
+                    // 如果定时器没有执行完3秒（尚未发生合并），说明用户是想重排
                     if (!_hasMerged) {
                       _reorderItems(draggedItem, targetItem);
                     }
@@ -340,14 +318,18 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     // candidateData.isNotEmpty 表示此时有东西悬浮在我头上
                     bool isHovered = candidateData.isNotEmpty;
 
-                    return Draggable<BookmarkItemWithIndex>(
+                    return Draggable<BookmarkGroup>(
                       data: targetItem, // 【重要】把当前数据作为 data 传出去
 
                       onDragStarted: () {
-                        _backupBookmarks = <BookmarkItemWithIndex>[];
+                        _backupBookmarks = <BookmarkGroup>[];
                         for (var item in _bookmarksState.value) {
                           _backupBookmarks.add(
-                            .new(item: item.item, children: item.children),
+                            .new(
+                              groupId: item.groupId,
+                              groupName: item.groupName,
+                              items: item.items,
+                            ),
                           );
                         }
                         print('备份数据: $_backupBookmarks');
@@ -368,24 +350,43 @@ class _BookmarksPageState extends State<BookmarksPage> {
                           willMergeItem: willMergeItem,
                         ),
                       ),
-                      onDragCompleted: () {
+                      onDragCompleted: () async {
                         print(
-                          '触发拖拽完成逻辑：${targetItem.item.name} and willMergeItem: $willMergeItem',
+                          '触发拖拽完成逻辑：${targetItem.groupName} and willMergeItem: $willMergeItem',
                         );
-                        if (willMergeItem != null) {
-                          var targetH = bookmarks[willMergeItem.targetIndex];
-                          (targetH.children ??= []);
-                          if (!targetH.children!.contains(targetItem.item)) {
-                            targetH.children!.add(targetItem.item);
-                          }
-                          var nb = List<BookmarkItemWithIndex>.from(bookmarks);
-                          // 1. 从列表中移除被拖拽的源元素
+                        if (willMergeItem != null && mergeTarget != null) {
+                          // 1. 找到目标组（mergeTarget 是合并的目标）
+                          var targetGroup = bookmarks.firstWhere(
+                            (e) => e.groupId == mergeTarget.groupId,
+                          );
+
+                          // 2. 创建新的书签项列表（深拷贝避免引用问题）
+                          // willMergeItem 是被拖拽的源元素，它的书签项要合并到目标组
+                          var mergedItems = List<BookmarkItem>.from(
+                            targetGroup.items,
+                          )..addAll(willMergeItem.items);
+
+                          // 3. 更新 UI 状态
+                          var nb = List<BookmarkGroup>.from(bookmarks);
+                          // 从列表中移除被拖拽的源元素（willMergeItem）
                           nb.removeWhere(
-                            (e) => e.item.name == targetItem.item.name,
-                          ); // 建议用唯一ID比较
+                            (e) => e.groupId == willMergeItem.groupId,
+                          );
                           _bookmarksState.value = nb;
                           _willMergeItem.value = null;
+                          _mergeTarget.value = null;
                           _backupBookmarks.clear();
+
+                          // 4. 调用 API 保存合并结果
+                          // 更新目标组，添加合并的书签
+                          await updateBookmarkGroup(
+                            groupId: targetGroup.groupId,
+                            groupName: targetGroup.groupName,
+                            items: mergedItems,
+                          );
+
+                          // 5. 重新获取数据以同步后端状态
+                          _fetchData();
                         }
                       },
 
@@ -402,6 +403,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                           e: targetItem,
                           isDragging: false,
                           willMergeItem: willMergeItem,
+                          mergeTarget: mergeTarget,
                         ),
                       ),
                     );
@@ -421,173 +423,30 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   // 为了代码整洁，单独抽离卡片UI
   Widget _buildItemUI({
-    required BookmarkItemWithIndex e,
+    required BookmarkGroup e,
     bool isDragging = false,
-    WillMergeItem? willMergeItem,
+    BookmarkGroup? willMergeItem,
+    BookmarkGroup? mergeTarget,
   }) {
-    if (willMergeItem != null) {
-      var t = _bookmarksState.value[willMergeItem.targetIndex];
-      if (t.item.name == e.item.name) {
-        print('合并项：${willMergeItem.item.name}');
-        var ccc = List<BookmarkItem>.from(e.children ?? []);
-        if (!ccc.contains(willMergeItem.item)) {
-          ccc.add(willMergeItem.item);
-        }
+    // 如果当前元素是合并的目标（target），则显示合并后的预览
+    if (willMergeItem != null && mergeTarget != null) {
+      if (mergeTarget.groupId == e.groupId) {
+        print('合并预览：${willMergeItem.groupName} 合并到 ${e.groupName}');
+        // 创建合并后的列表用于预览，不修改原始数据
+        var mergedItems = List<BookmarkItem>.from(e.items)
+          ..addAll(willMergeItem.items);
 
-        var elements = <BookmarkItem>{};
-        elements.addAll(ccc);
-        elements.add(e.item);
-
-        print('合并后：$elements.length');
+        print('合并后：${mergedItems.length}');
         return Container(
           width: 100,
           height: 100,
           color: Colors.transparent,
-          child: buildChild(elements.toList()),
+          child: buildChild(mergedItems),
         );
       }
     }
-    if (e.children != null && e.children!.isNotEmpty) {
-      print('willMergeItem is null and 子项：${e.children} and ${e.item}');
-      var c = (List<BookmarkItem>.from(e.children!))..add(e.item);
-      return AnimatedContainer(
-        // 添加动画过渡，让拖拽前后的变化更加丝滑
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        width: 90, // 稍微调整尺寸比例，显得更精致
-        height: 100,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-        decoration: BoxDecoration(
-          // 默认提供一个纯净的背景色，拖拽时微微透明
-          color: isDragging ? Colors.white.withOpacity(0.9) : Colors.white,
-          borderRadius: BorderRadius.circular(16), // 更圆润的倒角（现代APP标配）
-          // 拖拽时显示粉色边框，平时隐藏
-          border: Border.all(
-            color: isDragging ? Colors.pink : Colors.transparent,
-            width: 1.5,
-          ),
-          // 添加柔和的投影，拖拽时投影变大，产生“浮起”的视觉效果
-          boxShadow: [
-            BoxShadow(
-              color: isDragging
-                  ? Colors.pink.withOpacity(0.2) // 拖拽时粉色发光投影
-                  : Colors.black.withOpacity(0.04), // 平时微弱的灰色投影
-              blurRadius: isDragging ? 12 : 8,
-              spreadRadius: isDragging ? 2 : 0,
-              offset: isDragging ? const Offset(0, 6) : const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: ContextMenu(
-          items: [
-            // Simple command with Ctrl+[ shortcut.
-            const MenuButton(
-              trailing: MenuShortcut(
-                activator: SingleActivator(
-                  LogicalKeyboardKey.bracketLeft,
-                  control: true,
-                ),
-              ),
-              child: Text('重命名'),
-            ),
-            // Disabled command example with Ctrl+] shortcut.
-            const MenuButton(
-              trailing: MenuShortcut(
-                activator: SingleActivator(
-                  LogicalKeyboardKey.bracketRight,
-                  control: true,
-                ),
-              ),
-              enabled: false,
-              child: Text('Forward'),
-            ),
-            // Enabled command with Ctrl+R shortcut.
-            const MenuButton(
-              trailing: MenuShortcut(
-                activator: SingleActivator(
-                  LogicalKeyboardKey.keyR,
-                  control: true,
-                ),
-              ),
-              child: Text('Reload'),
-            ),
-            // Submenu with additional tools and a divider.
-            const MenuButton(
-              subMenu: [
-                MenuButton(
-                  trailing: MenuShortcut(
-                    activator: SingleActivator(
-                      LogicalKeyboardKey.keyS,
-                      control: true,
-                    ),
-                  ),
-                  child: Text('Save Page As...'),
-                ),
-                MenuButton(child: Text('Create Shortcut...')),
-                MenuButton(child: Text('Name Window...')),
-                MenuDivider(),
-                MenuButton(child: Text('Developer Tools')),
-              ],
-              child: Text('More Tools'),
-            ),
-            const MenuDivider(),
-            // Checkbox item; keep menu open while toggling for quick changes.
-            MenuCheckbox(
-              value: showBookmarksBar,
-              onChanged: (context, value) {
-                setState(() {
-                  showBookmarksBar = value;
-                });
-              },
-              autoClose: false,
-              trailing: const MenuShortcut(
-                activator: SingleActivator(
-                  LogicalKeyboardKey.keyB,
-                  control: true,
-                  shift: true,
-                ),
-              ),
-              child: const Text('Show Bookmarks Bar'),
-            ),
-            MenuCheckbox(
-              value: showFullUrls,
-              onChanged: (context, value) {
-                setState(() {
-                  showFullUrls = value;
-                });
-              },
-              autoClose: false,
-              child: const Text('Show Full URLs'),
-            ),
-            const MenuDivider(),
-            const MenuLabel(child: Text('People')),
-            const MenuDivider(),
-            // Radio group; only one person can be selected at a time.
-            MenuRadioGroup(
-              value: people,
-              onChanged: (context, value) {
-                setState(() {
-                  people = value;
-                });
-              },
-              children: const [
-                MenuRadio(
-                  value: 0,
-                  autoClose: false,
-                  child: Text('Pedro Duarte'),
-                ),
-                MenuRadio(
-                  value: 1,
-                  autoClose: false,
-                  child: Text('Colm Tuite'),
-                ),
-              ],
-            ),
-          ],
-          child: buildChild(c.toList()),
-        ),
-      );
-    }
+    print('willMergeItem is null and 子项：${e.groupName}');
+    var c = (List<BookmarkItem>.from(e.items));
     return AnimatedContainer(
       // 添加动画过渡，让拖拽前后的变化更加丝滑
       duration: const Duration(milliseconds: 200),
@@ -596,8 +455,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
       height: 100,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
-        // 默认提供一个纯净的背景色，拖拽时微微透明
-        color: isDragging ? Colors.white.withOpacity(0.9) : Colors.white,
+        // 默认提供一个纯净的背景色，拖拽时微微透明withOpacity(
+        color: isDragging ? Colors.white.withValues(alpha: 0.9) : Colors.white,
         borderRadius: BorderRadius.circular(16), // 更圆润的倒角（现代APP标配）
         // 拖拽时显示粉色边框，平时隐藏
         border: Border.all(
@@ -616,88 +475,130 @@ class _BookmarksPageState extends State<BookmarksPage> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // 图标区域：给图标加一个非常淡的背景圆圈，提升图标的精致度
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.gray.shade50,
-              shape: BoxShape.circle,
+      child: ContextMenu(
+        items: [
+          // Simple command with Ctrl+[ shortcut.
+          const MenuButton(
+            trailing: MenuShortcut(
+              activator: SingleActivator(
+                LogicalKeyboardKey.bracketLeft,
+                control: true,
+              ),
             ),
-            child: e.item.children == null
-                ? Image.network(
-                    e.item.icon,
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.cover,
-                    // 添加加载失败的备用图标，防止网络图片出错时UI崩溃
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.bookmark,
-                      color: Colors.gray,
-                      size: 32,
-                    ),
-                  )
-                : _childrenWidgets(e.item.children!),
+            child: Text('重命名'),
           ),
-          const Spacer(), // 替代 Expanded，把图标和文字优美地推开
-          // 文本区域：限制行数、处理溢出、优化字体样式
-          Text(
-            e.item.name.isEmpty ? e.item.folderName : e.item.name,
-            maxLines: 1, // 限制单行
-            overflow: TextOverflow.ellipsis, // 超出显示省略号
-            style: const TextStyle(
-              color: Color(0xFF4A4A4A), // 使用深灰色而不是纯黑或浅灰，更高级
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2, // 稍微增加字间距
+          // Disabled command example with Ctrl+] shortcut.
+          const MenuButton(
+            trailing: MenuShortcut(
+              activator: SingleActivator(
+                LogicalKeyboardKey.bracketRight,
+                control: true,
+              ),
             ),
+            enabled: false,
+            child: Text('Forward'),
+          ),
+          // Enabled command with Ctrl+R shortcut.
+          const MenuButton(
+            trailing: MenuShortcut(
+              activator: SingleActivator(
+                LogicalKeyboardKey.keyR,
+                control: true,
+              ),
+            ),
+            child: Text('Reload'),
+          ),
+          // Submenu with additional tools and a divider.
+          const MenuButton(
+            subMenu: [
+              MenuButton(
+                trailing: MenuShortcut(
+                  activator: SingleActivator(
+                    LogicalKeyboardKey.keyS,
+                    control: true,
+                  ),
+                ),
+                child: Text('Save Page As...'),
+              ),
+              MenuButton(child: Text('Create Shortcut...')),
+              MenuButton(child: Text('Name Window...')),
+              MenuDivider(),
+              MenuButton(child: Text('Developer Tools')),
+            ],
+            child: Text('More Tools'),
+          ),
+          const MenuDivider(),
+          // Checkbox item; keep menu open while toggling for quick changes.
+          MenuCheckbox(
+            value: showBookmarksBar,
+            onChanged: (context, value) {
+              setState(() {
+                showBookmarksBar = value;
+              });
+            },
+            autoClose: false,
+            trailing: const MenuShortcut(
+              activator: SingleActivator(
+                LogicalKeyboardKey.keyB,
+                control: true,
+                shift: true,
+              ),
+            ),
+            child: const Text('Show Bookmarks Bar'),
+          ),
+          MenuCheckbox(
+            value: showFullUrls,
+            onChanged: (context, value) {
+              setState(() {
+                showFullUrls = value;
+              });
+            },
+            autoClose: false,
+            child: const Text('Show Full URLs'),
+          ),
+          const MenuDivider(),
+          const MenuLabel(child: Text('People')),
+          const MenuDivider(),
+          // Radio group; only one person can be selected at a time.
+          MenuRadioGroup(
+            value: people,
+            onChanged: (context, value) {
+              setState(() {
+                people = value;
+              });
+            },
+            children: const [
+              MenuRadio(
+                value: 0,
+                autoClose: false,
+                child: Text('Pedro Duarte'),
+              ),
+              MenuRadio(value: 1, autoClose: false, child: Text('Colm Tuite')),
+            ],
           ),
         ],
+        child: buildChild(c.toList(), name: e.groupName),
       ),
     );
   }
 
-  Widget _childrenWidgets(List<BookmarkItem> children) {
-    if (children.length <= 2) {
-      return Row(
-        children: children
-            .map((e) => Image.network(e.icon, width: 30, height: 30))
-            .toList(),
-      );
-    }
-
-    var firstLine = children.sublist(0, 2);
-    var secondLine = children.sublist(2, min(children.length, 4));
-    return Column(
-      children: [
-        Row(
-          children: firstLine
-              .map((e) => Image.network(e.icon, width: 30, height: 30))
-              .toList(),
-        ),
-        Row(
-          children: secondLine
-              .map((e) => Image.network(e.icon, width: 30, height: 30))
-              .toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget buildChild(List<BookmarkItem> elements) {
+  Widget buildChild(List<BookmarkItem> elements, {String? name}) {
     if (elements.length <= 2) {
       var list = elements.map((e) {
         return Image.network(e.icon, width: 28, height: 28);
       }).toList();
+      print('list length: ${list.length}');
       return Column(
         mainAxisAlignment: .center,
         children: [
           Expanded(
             child: Row(mainAxisAlignment: .center, spacing: 8, children: list),
           ),
-          Text('收藏夹', style: .new(color: Colors.pink)),
+          Text(
+            name?.trim() ?? '收藏夹',
+            style: .new(color: Colors.pink),
+            maxLines: 1,
+          ),
         ],
       );
     }
@@ -732,7 +633,11 @@ class _BookmarksPageState extends State<BookmarksPage> {
               ],
             ),
           ),
-          Text('收藏夹', style: .new(color: Colors.pink)),
+          Text(
+            name?.trim() ?? '收藏夹',
+            style: .new(color: Colors.pink),
+            maxLines: 1,
+          ),
         ],
       );
     }
