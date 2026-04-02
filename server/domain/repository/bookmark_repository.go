@@ -6,10 +6,16 @@ import (
 )
 
 type BookmarkRepository interface {
-	Create(bookmark *entity.Bookmark) error
+	Create(bookmark *entity.BookmarkGroup) error
 	CreateBookItem(bookmarkItem *entity.BookmarkItem) error
-	FindAll() ([]res.BookmarkResponse, error)
-	FindByID(id uint) (*entity.Bookmark, error)
-	Update(bookmark *entity.Bookmark) error
+	FindAll() ([]res.BookmarkGroupResponse, error)
+	FindByID(id uint) (*entity.BookmarkGroup, error)
+	FindByBookItemId(id uint) (*entity.BookmarkItem, error)
+	Update(bookmark *entity.BookmarkGroup) error
+	UpdateBookItem(bookmarkItem *entity.BookmarkItem) error
 	Delete(id uint) error
+	SaveOrUpdate(bookmark *entity.BookmarkGroup) error
+	SaveOrUpdateBookItem(bookmarkItem *entity.BookmarkItem) error
+	DeleteBookItem(id uint) error
+	DeleteBookmarkItemByGroupId(groupId uint) error
 }

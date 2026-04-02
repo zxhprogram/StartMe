@@ -16,7 +16,7 @@ func InitDB() (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if err := DB.AutoMigrate(&entity.Bookmark{}, &entity.BookmarkItem{}); err != nil {
+	if err := DB.AutoMigrate(&entity.BookmarkGroup{}, &entity.BookmarkItem{}); err != nil {
 		return nil, err
 	}
 

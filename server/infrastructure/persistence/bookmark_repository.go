@@ -17,47 +17,101 @@ func NewBookmarkRepository(db *gorm.DB) repository.BookmarkRepository {
 	return &BookmarkRepositoryImpl{db: db}
 }
 
-func (r *BookmarkRepositoryImpl) Create(bookmark *entity.Bookmark) error {
+func (r *BookmarkRepositoryImpl) DeleteBookmarkItemByGroupId(groupId uint) error {
+	return r.db.Delete(&entity.BookmarkItem{}, "group_id = ?", groupId).Error
+}
+
+func (r *BookmarkRepositoryImpl) Create(bookmark *entity.BookmarkGroup) error {
 	return r.db.Create(bookmark).Error
+}
+
+func (r *BookmarkRepositoryImpl) DeleteBookItem(id uint) error {
+	return r.db.Delete(&entity.BookmarkItem{}, id).Error
 }
 
 func (r *BookmarkRepositoryImpl) CreateBookItem(bookmarkItem *entity.BookmarkItem) error {
 	return r.db.Create(bookmarkItem).Error
 }
 
-func (r *BookmarkRepositoryImpl) FindAll() ([]res.BookmarkResponse, error) {
-	//执行sql语句查询结果，对结果处理封装
-	var bookmarks []res.BookmarkResponse
-	result := r.db.Raw("SELECT b.name as folderName,b.type,i.id,i.name,i.url,i.icon,i.parent_id FROM bookmarks b INNER JOIN bookmark_items i on b.id = i.parent_id where b.type = 'folder'").Scan(&bookmarks)
+func (r *BookmarkRepositoryImpl) FindByBookItemId(id uint) (*entity.BookmarkItem, error) {
+	var bookmarkItem entity.BookmarkItem
+	result := r.db.First(&bookmarkItem, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	var nonFolderBookmarks []res.BookmarkResponse
-	newResult := r.db.Raw("SELECT *,'bookmark' type FROM bookmark_items WHERE parent_id = 0").Scan(&nonFolderBookmarks)
-	fmt.Println(len(nonFolderBookmarks))
-	if newResult.Error != nil {
-		return nil, result.Error
-	}
-	totalResult := append(bookmarks, nonFolderBookmarks...)
-	if len(totalResult) == 0 {
-		return []res.BookmarkResponse{}, nil
-	}
-	return totalResult, nil
+	return &bookmarkItem, nil
 }
 
-func (r *BookmarkRepositoryImpl) FindByID(id uint) (*entity.Bookmark, error) {
-	var bookmark entity.Bookmark
+func (r *BookmarkRepositoryImpl) UpdateBookItem(bookmarkItem *entity.BookmarkItem) error {
+	return r.db.Save(bookmarkItem).Error
+}
+
+func (r *BookmarkRepositoryImpl) FindAll() ([]res.BookmarkGroupResponse, error) {
+
+	var bookmarkgroupList []entity.BookmarkGroup
+	result := r.db.Find(&bookmarkgroupList)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return []res.BookmarkGroupResponse{}, nil
+	}
+	var bookmarks []res.BookmarkGroupResponse
+	for _, bookmarkgroup := range bookmarkgroupList {
+		bookmarks = append(bookmarks, res.BookmarkGroupResponse{
+			Id:   bookmarkgroup.Id,
+			Name: bookmarkgroup.Name,
+		})
+	}
+
+	for i := range bookmarks {
+		var bookmarkitemList []entity.BookmarkItem
+		result := r.db.Where("group_id = ?", bookmarks[i].Id).Find(&bookmarkitemList)
+
+		if result.Error != nil {
+			return nil, result.Error
+		}
+		for _, bookmarkitem := range bookmarkitemList {
+			bookmarks[i].BookmarkList = append(bookmarks[i].BookmarkList, res.BookmarkItemResponse{
+				Id:      bookmarkitem.Id,
+				Name:    bookmarkitem.Name,
+				Url:     bookmarkitem.Url,
+				Icon:    bookmarkitem.Icon,
+				GroupId: bookmarks[i].Id,
+			})
+			fmt.Println(bookmarks[i])
+		}
+	}
+
+	fmt.Println(bookmarks)
+	return bookmarks, nil
+}
+
+func (r *BookmarkRepositoryImpl) FindByID(id uint) (*entity.BookmarkGroup, error) {
+	var bookmark entity.BookmarkGroup
 	result := r.db.First(&bookmark, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+	if result.RowsAffected == 0 {
+		return nil, nil
+	}
 	return &bookmark, nil
 }
 
-func (r *BookmarkRepositoryImpl) Update(bookmark *entity.Bookmark) error {
+func (r *BookmarkRepositoryImpl) Update(bookmark *entity.BookmarkGroup) error {
 	return r.db.Save(bookmark).Error
 }
 
 func (r *BookmarkRepositoryImpl) Delete(id uint) error {
-	return r.db.Delete(&entity.Bookmark{}, id).Error
+	return r.db.Delete(&entity.BookmarkGroup{}, id).Error
+}
+
+func (r *BookmarkRepositoryImpl) SaveOrUpdate(bookmark *entity.BookmarkGroup) error {
+	return r.db.Save(bookmark).Error
+}
+
+func (r *BookmarkRepositoryImpl) SaveOrUpdateBookItem(bookmarkItem *entity.BookmarkItem) error {
+	return r.db.Save(bookmarkItem).Error
 }
