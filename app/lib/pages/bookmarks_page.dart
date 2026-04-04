@@ -277,12 +277,16 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     // 清除旧的定时器
                     _hoverTimer?.cancel();
 
-                    // 启动 3 秒定时器
-                    _hoverTimer = Timer(const Duration(seconds: 3), () {
-                      // 如果 3 秒到了，用户还没移开也没松手，触发合并预览！
-                      _hasMerged = true;
-                      _mergeItems(draggedItem, targetItem);
-                    });
+                    // 只有当拖拽的分组只有一个书签时，才支持合并
+                    // 多个书签的分组只能排序
+                    if (draggedItem.items.length == 1) {
+                      // 启动 3 秒定时器
+                      _hoverTimer = Timer(const Duration(seconds: 3), () {
+                        // 如果 3 秒到了，用户还没移开也没松手，触发合并预览！
+                        _hasMerged = true;
+                        _mergeItems(draggedItem, targetItem);
+                      });
+                    }
 
                     return true; // 告诉框架：我允许接受这个拖拽物
                   },
@@ -353,7 +357,10 @@ class _BookmarksPageState extends State<BookmarksPage> {
                         logger.info(
                           '触发拖拽完成逻辑：${targetItem.groupName} and willMergeItem: $willMergeItem',
                         );
-                        if (willMergeItem != null && mergeTarget != null) {
+                        // 只有当合并预览被触发（willMergeItem != null）且拖拽的分组只有一个书签时才执行合并
+                        if (willMergeItem != null &&
+                            mergeTarget != null &&
+                            willMergeItem.items.length == 1) {
                           // 1. 找到目标组（mergeTarget 是合并的目标）
                           var targetGroup = bookmarks.firstWhere(
                             (e) => e.groupId == mergeTarget.groupId,
@@ -382,6 +389,13 @@ class _BookmarksPageState extends State<BookmarksPage> {
                             groupId: targetGroup.groupId,
                             groupName: targetGroup.groupName,
                             items: mergedItems,
+                          );
+
+                          // 5. 调用api 更新被拖拽的源元素（willMergeItem）
+                          await updateBookmarkGroup(
+                            groupId: willMergeItem.groupId,
+                            groupName: willMergeItem.groupName,
+                            items: [],
                           );
 
                           // 5. 重新获取数据以同步后端状态
@@ -427,8 +441,10 @@ class _BookmarksPageState extends State<BookmarksPage> {
     BookmarkGroup? willMergeItem,
     BookmarkGroup? mergeTarget,
   }) {
-    // 如果当前元素是合并的目标（target），则显示合并后的预览
-    if (willMergeItem != null && mergeTarget != null) {
+    // 如果当前元素是合并的目标（target），且拖拽的分组只有一个书签，则显示合并后的预览
+    if (willMergeItem != null &&
+        mergeTarget != null &&
+        willMergeItem.items.length == 1) {
       if (mergeTarget.groupId == e.groupId) {
         logger.fine('合并预览：${willMergeItem.groupName} 合并到 ${e.groupName}');
         // 创建合并后的列表用于预览，不修改原始数据
