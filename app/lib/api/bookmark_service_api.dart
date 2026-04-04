@@ -1,14 +1,28 @@
 import 'package:app/global/global_status.dart';
+import 'package:app/services/logger_service.dart';
 
 Future<BookmarkListResponse> bookmarkList() async {
-  var response = await dio.get('/bookmark/list');
-  return .fromJson(response.data);
+  logger.info('API: 获取书签列表');
+  try {
+    var response = await dio.get('/bookmark/list');
+    logger.info('API: 获取书签列表成功');
+    return BookmarkListResponse.fromJson(response.data);
+  } catch (e, stackTrace) {
+    logger.severe('API: 获取书签列表失败', e, stackTrace);
+    rethrow;
+  }
 }
 
 Future<UrlInfoResponse> urlInfo({required String url}) async {
-  var response = await dio.post('/url/info', data: {'url': url});
-  print(response.data);
-  return .fromJson(response.data);
+  logger.info('API: 获取URL信息 - $url');
+  try {
+    var response = await dio.post('/url/info', data: {'url': url});
+    logger.fine('API: URL信息响应 - ${response.data}');
+    return UrlInfoResponse.fromJson(response.data);
+  } catch (e, stackTrace) {
+    logger.severe('API: 获取URL信息失败 - $url', e, stackTrace);
+    rethrow;
+  }
 }
 
 Future<CreateBookmarkGroupResponse> createBookmarkGroup({
@@ -16,11 +30,41 @@ Future<CreateBookmarkGroupResponse> createBookmarkGroup({
   required String url,
   required String icon,
 }) async {
-  var response = await dio.post(
-    '/bookmark/createGroup',
-    data: {'name': name, 'url': url, 'icon': icon},
-  );
-  return .fromJson(response.data);
+  logger.info('API: 创建书签组 - $name');
+  try {
+    var response = await dio.post(
+      '/bookmark/createGroup',
+      data: {'name': name, 'url': url, 'icon': icon},
+    );
+    logger.info('API: 创建书签组成功 - $name');
+    return CreateBookmarkGroupResponse.fromJson(response.data);
+  } catch (e, stackTrace) {
+    logger.severe('API: 创建书签组失败 - $name', e, stackTrace);
+    rethrow;
+  }
+}
+
+Future<UpdateBookmarkGroupResponse> updateBookmarkGroup({
+  required int groupId,
+  required String groupName,
+  required List<BookmarkItem> items,
+}) async {
+  logger.info('API: 更新书签组 - $groupName (ID: $groupId)');
+  try {
+    var response = await dio.post(
+      '/bookmark/updateGroup',
+      data: {
+        'id': groupId,
+        'name': groupName,
+        'items': items.map((e) => e.toJson()).toList(),
+      },
+    );
+    logger.info('API: 更新书签组成功 - $groupName');
+    return UpdateBookmarkGroupResponse.fromJson(response.data);
+  } catch (e, stackTrace) {
+    logger.severe('API: 更新书签组失败 - $groupName', e, stackTrace);
+    rethrow;
+  }
 }
 
 class CreateBookmarkGroupResponse {
@@ -28,7 +72,7 @@ class CreateBookmarkGroupResponse {
   CreateBookmarkGroupResponseData? data;
   CreateBookmarkGroupResponse({required this.message, this.data});
   factory CreateBookmarkGroupResponse.fromJson(Map<String, dynamic> json) {
-    return .new(
+    return CreateBookmarkGroupResponse(
       message: json['message'],
       data: json['data'] != null
           ? CreateBookmarkGroupResponseData.fromJson(json['data'])
@@ -51,13 +95,21 @@ class CreateBookmarkGroupResponseData {
     required this.groupId,
   });
   factory CreateBookmarkGroupResponseData.fromJson(Map<String, dynamic> json) {
-    return .new(
+    return CreateBookmarkGroupResponseData(
       id: json['id'],
       name: json['name'],
       url: json['url'],
       icon: json['icon'],
       groupId: json['groupId'],
     );
+  }
+}
+
+class UpdateBookmarkGroupResponse {
+  String message;
+  UpdateBookmarkGroupResponse({required this.message});
+  factory UpdateBookmarkGroupResponse.fromJson(Map<String, dynamic> json) {
+    return UpdateBookmarkGroupResponse(message: json['message']);
   }
 }
 
@@ -124,6 +176,13 @@ class BookmarkGroup {
                 .toList(),
     );
   }
+  Map<String, dynamic> toJson() {
+    return {
+      'groupId': groupId,
+      'groupName': groupName,
+      'items': items.map((e) => e.toJson()).toList(),
+    };
+  }
 }
 
 class BookmarkItem {
@@ -148,32 +207,13 @@ class BookmarkItem {
       groupId: json['groupId'],
     );
   }
-
   Map<String, dynamic> toJson() {
-    return {'id': bookmarkId, 'name': bookmarkName, 'url': url, 'icon': icon};
-  }
-}
-
-Future<UpdateBookmarkGroupResponse> updateBookmarkGroup({
-  required int groupId,
-  required String groupName,
-  required List<BookmarkItem> items,
-}) async {
-  var response = await dio.post(
-    '/bookmark/updateGroup',
-    data: {
-      'id': groupId,
-      'name': groupName,
-      'items': items.map((e) => e.toJson()).toList(),
-    },
-  );
-  return .fromJson(response.data);
-}
-
-class UpdateBookmarkGroupResponse {
-  String message;
-  UpdateBookmarkGroupResponse({required this.message});
-  factory UpdateBookmarkGroupResponse.fromJson(Map<String, dynamic> json) {
-    return .new(message: json['message']);
+    return {
+      'bookmarkId': bookmarkId,
+      'bookmarkName': bookmarkName,
+      'url': url,
+      'icon': icon,
+      'groupId': groupId,
+    };
   }
 }

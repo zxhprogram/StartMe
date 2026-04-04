@@ -1,6 +1,7 @@
 import 'dart:async'; // 引入 Timer
 import 'dart:math';
 import 'package:app/api/bookmark_service_api.dart';
+import 'package:app/services/logger_service.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart' show Material;
 import 'package:flutter/services.dart';
@@ -48,7 +49,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   // ==== 核心业务逻辑：合并 ====
   void _mergeItems(BookmarkGroup source, BookmarkGroup target) {
-    print('触发合并逻辑：${source.groupName} 合并到 ${target.groupName}');
+    logger.info('触发合并逻辑：${source.groupName} 合并到 ${target.groupName}');
 
     var currentList = List<BookmarkGroup>.from(_bookmarksState.value);
     var targetIndex = currentList.indexWhere(
@@ -62,7 +63,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   // ==== 核心业务逻辑：排序 ====
   void _reorderItems(BookmarkGroup source, BookmarkGroup target) async {
-    print('触发重排逻辑：${source.groupName} 移动到 ${target.groupName}');
+    logger.info('触发重排逻辑：${source.groupName} 移动到 ${target.groupName}');
 
     var currentList = List<BookmarkGroup>.from(_bookmarksState.value);
 
@@ -138,7 +139,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                   'search-debouncer',
                                   const Duration(milliseconds: 700),
                                   () async {
-                                    print('输入了 $value');
+                                    logger.fine('输入了 $value');
                                     // nameController.text = value;
                                     if (value.isEmpty) {
                                       return;
@@ -290,8 +291,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
                   onLeave: (data) {
                     // 如果已经触发了合并预览（_willMergeItem 不为空），则恢复备份
                     if (_willMergeItem.value != null) {
-                      print('触发移开逻辑：${targetItem.groupName} 移开 $data');
-                      print('合并被取消，恢复备份数据, 备份数据: $_backupBookmarks');
+                      logger.info('触发移开逻辑：${targetItem.groupName} 移开 $data');
+                      logger.fine('合并被取消，恢复备份数据, 备份数据: $_backupBookmarks');
                       _bookmarksState.value = _backupBookmarks;
                       _hasMerged = false;
                       _willMergeItem.value = null;
@@ -332,8 +333,6 @@ class _BookmarksPageState extends State<BookmarksPage> {
                             ),
                           );
                         }
-                        print('备份数据: $_backupBookmarks');
-
                         _hasMerged = false;
                       },
 
@@ -351,7 +350,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
                         ),
                       ),
                       onDragCompleted: () async {
-                        print(
+                        logger.info(
                           '触发拖拽完成逻辑：${targetItem.groupName} and willMergeItem: $willMergeItem',
                         );
                         if (willMergeItem != null && mergeTarget != null) {
@@ -431,12 +430,12 @@ class _BookmarksPageState extends State<BookmarksPage> {
     // 如果当前元素是合并的目标（target），则显示合并后的预览
     if (willMergeItem != null && mergeTarget != null) {
       if (mergeTarget.groupId == e.groupId) {
-        print('合并预览：${willMergeItem.groupName} 合并到 ${e.groupName}');
+        logger.fine('合并预览：${willMergeItem.groupName} 合并到 ${e.groupName}');
         // 创建合并后的列表用于预览，不修改原始数据
         var mergedItems = List<BookmarkItem>.from(e.items)
           ..addAll(willMergeItem.items);
 
-        print('合并后：${mergedItems.length}');
+        logger.fine('合并后：${mergedItems.length}');
         return Container(
           width: 100,
           height: 100,
@@ -445,7 +444,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
         );
       }
     }
-    print('willMergeItem is null and 子项：${e.groupName}');
+    logger.finest('willMergeItem is null and 子项：${e.groupName}');
     var c = (List<BookmarkItem>.from(e.items));
     return AnimatedContainer(
       // 添加动画过渡，让拖拽前后的变化更加丝滑
@@ -587,7 +586,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
       var list = elements.map((e) {
         return Image.network(e.icon, width: 28, height: 28);
       }).toList();
-      print('list length: ${list.length}');
+      logger.finest('list length: ${list.length}');
       return Column(
         mainAxisAlignment: .center,
         children: [

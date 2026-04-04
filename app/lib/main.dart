@@ -1,7 +1,12 @@
 import 'package:app/router/router.dart';
+import 'package:app/services/logger_service.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await logger.init();
+
   runApp(
     ShadcnApp.router(
       scaling: const AdaptiveScaling(0.95),
