@@ -216,4 +216,9 @@ class BookmarkItem {
       'groupId': groupId,
     };
   }
+
+  @override
+  String toString() {
+    return 'BookmarkItem{bookmarkId: $bookmarkId, bookmarkName: $bookmarkName, url: $url, icon: $icon, groupId: $groupId}';
+  }
 }

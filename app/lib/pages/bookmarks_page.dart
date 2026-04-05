@@ -21,8 +21,10 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   // 用于控制 1 秒悬浮的定时器
   Timer? _hoverTimer;
+
   // 用于标记本次拖拽是否已经触发了合并，防止松手时又触发重排
   bool _hasMerged = false;
+
   // 用于备份拖拽事件开始之前的所有的数据
   List<BookmarkGroup> _backupBookmarks = [];
   final _willMergeItem = signal<BookmarkGroup?>(null);
@@ -324,8 +326,9 @@ class _BookmarksPageState extends State<BookmarksPage> {
                     bool isHovered = candidateData.isNotEmpty;
 
                     return Draggable<BookmarkGroup>(
-                      data: targetItem, // 【重要】把当前数据作为 data 传出去
+                      data: targetItem,
 
+                      // 【重要】把当前数据作为 data 传出去
                       onDragStarted: () {
                         _backupBookmarks = <BookmarkGroup>[];
                         for (var item in _bookmarksState.value) {
@@ -404,19 +407,46 @@ class _BookmarksPageState extends State<BookmarksPage> {
                       },
 
                       // UI渲染，如果是被悬浮状态，可以加个边框或缩放提示用户要合并了
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: isHovered
-                              ? Border.all(color: Colors.blue, width: 2)
-                              : null,
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: _buildItemUI(
-                          e: targetItem,
-                          isDragging: false,
-                          willMergeItem: willMergeItem,
-                          mergeTarget: mergeTarget,
+                      child: GestureDetector(
+                        onTap: () {
+                          //展开文件夹中的内容，显示在弹窗中
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              final FormController controller =
+                                  FormController();
+                              return AlertDialog(
+                                title: Text(targetItem.groupName),
+                                content: _buildBookmarkList(targetItem.items),
+                                actions: [
+                                  PrimaryButton(
+                                    child: const Text('Save changes'),
+                                    onPressed: () {
+                                      // Return the form values and close the dialog.
+                                      Navigator.of(
+                                        context,
+                                      ).pop(controller.values);
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: isHovered
+                                ? Border.all(color: Colors.blue, width: 2)
+                                : null,
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: _buildItemUI(
+                            e: targetItem,
+                            isDragging: false,
+                            willMergeItem: willMergeItem,
+                            mergeTarget: mergeTarget,
+                          ),
                         ),
                       ),
                     );
@@ -426,6 +456,30 @@ class _BookmarksPageState extends State<BookmarksPage> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBookmarkList(List<BookmarkItem> items) {
+    logger.fine('items: $items');
+    return SingleChildScrollView(
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: items
+            .map(
+              (e) => SizedBox(
+                width: 48,
+                height: 48,
+                child: Column(
+                  children: [
+                    Image.network(e.icon, width: 40, height: 40),
+                    Text(e.bookmarkName),
+                  ],
+                ),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -466,7 +520,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
       // 添加动画过渡，让拖拽前后的变化更加丝滑
       duration: const Duration(milliseconds: 200),
       curve: Curves.easeInOut,
-      width: 90, // 稍微调整尺寸比例，显得更精致
+      width: 90,
+      // 稍微调整尺寸比例，显得更精致
       height: 100,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
