@@ -419,15 +419,15 @@ class _BookmarksPageState extends State<BookmarksPage> {
                                 title: Text(targetItem.groupName),
                                 content: _buildBookmarkList(targetItem.items),
                                 actions: [
-                                  PrimaryButton(
-                                    child: const Text('Save changes'),
-                                    onPressed: () {
-                                      // Return the form values and close the dialog.
-                                      Navigator.of(
-                                        context,
-                                      ).pop(controller.values);
-                                    },
-                                  ),
+                                  // PrimaryButton(
+                                  //   child: const Text('Save changes'),
+                                  //   onPressed: () {
+                                  //     // Return the form values and close the dialog.
+                                  //     Navigator.of(
+                                  //       context,
+                                  //     ).pop(controller.values);
+                                  //   },
+                                  // ),
                                 ],
                               );
                             },
@@ -462,24 +462,32 @@ class _BookmarksPageState extends State<BookmarksPage> {
 
   Widget _buildBookmarkList(List<BookmarkItem> items) {
     logger.fine('items: $items');
-    return SingleChildScrollView(
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: items
-            .map(
-              (e) => SizedBox(
-                width: 48,
-                height: 48,
-                child: Column(
-                  children: [
-                    Image.network(e.icon, width: 40, height: 40),
-                    Text(e.bookmarkName),
-                  ],
+    return SizedBox(
+      height: 300,
+      width: 300,
+      child: SingleChildScrollView(
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items
+              .map(
+                (e) => SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Column(
+                    children: [
+                      Image.network(e.icon, width: 40, height: 40),
+                      Text(
+                        e.bookmarkName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            )
-            .toList(),
+              )
+              .toList(),
+        ),
       ),
     );
   }

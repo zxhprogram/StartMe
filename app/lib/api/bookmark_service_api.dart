@@ -49,7 +49,7 @@ Future<UpdateBookmarkGroupResponse> updateBookmarkGroup({
   required String groupName,
   required List<BookmarkItem> items,
 }) async {
-  logger.info('API: 更新书签组 - $groupName (ID: $groupId)');
+  logger.info('API: 更新书签组 - $groupName (ID: $groupId) items: $items');
   try {
     var response = await dio.post(
       '/bookmark/updateGroup',
@@ -210,7 +210,7 @@ class BookmarkItem {
   Map<String, dynamic> toJson() {
     return {
       'bookmarkId': bookmarkId,
-      'bookmarkName': bookmarkName,
+      'name': bookmarkName,
       'url': url,
       'icon': icon,
       'groupId': groupId,
