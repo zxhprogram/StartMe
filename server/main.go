@@ -22,12 +22,15 @@ func main() {
 	bookmarkUsecase := usecase.NewBookmarkUsecase(bookmarkRepo)
 	urlInfoUsecase := usecase.NewURLInfoUsecase()
 	defer urlInfoUsecase.Close()
+	unsplashUsecase := usecase.NewUnsplashUsecase()
+	defer unsplashUsecase.Close()
 
 	bookmarkHandler := handler.NewBookmarkHandler(bookmarkUsecase)
 	urlInfoHandler := handler.NewURLInfoHandler(urlInfoUsecase)
 	searchHandler := handler.NewSearchHandler()
+	unsplashHandler := handler.NewUnsplashHandler(unsplashUsecase)
 
-	router := http.NewRouter(bookmarkHandler, urlInfoHandler, searchHandler)
+	router := http.NewRouter(bookmarkHandler, urlInfoHandler, searchHandler, unsplashHandler)
 
 	r := gin.Default()
 	//添加跨域

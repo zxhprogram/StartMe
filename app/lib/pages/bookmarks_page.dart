@@ -1,6 +1,7 @@
 import 'dart:async'; // 引入 Timer
 import 'dart:math';
 import 'package:app/api/bookmark_service_api.dart';
+import 'package:app/api/unsplash_service_api.dart';
 import 'package:app/services/logger_service.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:flutter/material.dart' show Material;
@@ -31,6 +32,9 @@ class _BookmarksPageState extends State<BookmarksPage> {
   final _mergeTarget = signal<BookmarkGroup?>(null);
   final _urlInfo = signal<UrlInfoData?>(null);
   late TextEditingController nameController = TextEditingController();
+  final _backgroundState = signal(
+    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
+  );
 
   @override
   void initState() {
@@ -213,11 +217,19 @@ class _BookmarksPageState extends State<BookmarksPage> {
     nameController.clear();
   }
 
+  void _changeBackground(BuildContext context) async {
+    var r = await getRandomPhotos();
+    if (r.data != null) {
+      _backgroundState.value = r.data![0].url;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     var bookmarks = _bookmarksState.watch(context);
     var willMergeItem = _willMergeItem.watch(context);
     var mergeTarget = _mergeTarget.watch(context);
+    var backgroundUrl = _backgroundState.watch(context);
 
     return ContextMenu(
       items: [
@@ -234,6 +246,22 @@ class _BookmarksPageState extends State<BookmarksPage> {
               const Icon(BootstrapIcons.bookmarkPlus),
               const Gap(4),
               Text('新增书签'),
+            ],
+          ),
+        ),
+        MenuButton(
+          trailing: MenuShortcut(
+            activator: SingleActivator(
+              LogicalKeyboardKey.bracketLeft,
+              control: true,
+            ),
+          ),
+          onPressed: _changeBackground,
+          child: Row(
+            children: [
+              const Icon(BootstrapIcons.imageFill),
+              const Gap(4),
+              Text('更换背景'),
             ],
           ),
         ),
@@ -256,9 +284,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
             image: DecorationImage(
               fit: BoxFit.cover,
               opacity: 0.3,
-              image: const NetworkImage(
-                'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
-              ),
+              image: NetworkImage(backgroundUrl),
             ),
           ),
           child: Card(
