@@ -33,7 +33,7 @@ class _BookmarksPageState extends State<BookmarksPage> {
   final _urlInfo = signal<UrlInfoData?>(null);
   late TextEditingController nameController = TextEditingController();
   final _backgroundState = signal(
-    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b',
+    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTYzMDd8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzUzOTc3OTd8&ixlib=rb-4.1.0&q=80&w=1080',
   );
 
   @override
