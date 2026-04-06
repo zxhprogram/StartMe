@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:signals/signals_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class BookmarksPage extends StatefulWidget {
   const BookmarksPage({super.key});
@@ -500,15 +501,58 @@ class _BookmarksPageState extends State<BookmarksPage> {
                 (e) => SizedBox(
                   width: 48,
                   height: 48,
-                  child: Column(
-                    children: [
-                      Image.network(e.icon, width: 40, height: 40),
-                      Text(
-                        e.bookmarkName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  child: GestureDetector(
+                    onTap: () {
+                      launchUrl(Uri.parse(e.url));
+                    },
+                    child: HoverCard(
+                      hoverBuilder: (context) {
+                        return SurfaceCard(
+                          child: Basic(
+                            leading: Image.network(
+                              e.icon,
+                              width: 40,
+                              height: 40,
+                            ),
+                            title: Text(e.bookmarkName),
+                            content: Column(
+                              children: [
+                                Text(e.url),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  spacing: 4,
+                                  children: [
+                                    Icon(
+                                      BootstrapIcons.wifi,
+                                      size: 24,
+                                      color: Colors.pink,
+                                    ),
+                                    Text(
+                                      '200ms',
+                                      style: TextStyle(
+                                        color: Colors.pink,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ).sized(width: 300);
+                      },
+                      child: Column(
+                        children: [
+                          Image.network(e.icon, width: 40, height: 40),
+                          Text(
+                            e.bookmarkName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               )
