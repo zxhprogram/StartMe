@@ -1,0 +1,34 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+main
+server
+
+# Test files
+*_test.go
+
+# Database files (will be created at runtime)
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# HTTP client files
+*.http

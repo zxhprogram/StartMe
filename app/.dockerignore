@@ -1,0 +1,40 @@
+# Build outputs
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Test files
+test/
+
+# Platform specific files (not needed for web)
+android/
+ios/
+macos/
+windows/
+linux/
+
+# Misc
+*.log
+*.tmp
