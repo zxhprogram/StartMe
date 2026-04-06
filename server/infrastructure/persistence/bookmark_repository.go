@@ -74,11 +74,12 @@ func (r *BookmarkRepositoryImpl) FindAll() ([]res.BookmarkGroupResponse, error) 
 		}
 		for _, bookmarkitem := range bookmarkitemList {
 			bookmarks[i].BookmarkList = append(bookmarks[i].BookmarkList, res.BookmarkItemResponse{
-				Id:      bookmarkitem.Id,
-				Name:    bookmarkitem.Name,
-				Url:     bookmarkitem.Url,
-				Icon:    bookmarkitem.Icon,
-				GroupId: bookmarks[i].Id,
+				Id:         bookmarkitem.Id,
+				Name:       bookmarkitem.Name,
+				Url:        bookmarkitem.Url,
+				Icon:       bookmarkitem.Icon,
+				GroupId:    bookmarks[i].Id,
+				VisitCount: bookmarkitem.VisitCount,
 			})
 			fmt.Println(bookmarks[i])
 		}
@@ -86,6 +87,15 @@ func (r *BookmarkRepositoryImpl) FindAll() ([]res.BookmarkGroupResponse, error) 
 
 	fmt.Println(bookmarks)
 	return bookmarks, nil
+}
+
+func (r *BookmarkRepositoryImpl) FindBookmarkItemByID(id uint) (*entity.BookmarkItem, error) {
+	var bookmarkItem entity.BookmarkItem
+	result := r.db.First(&bookmarkItem, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &bookmarkItem, nil
 }
 
 func (r *BookmarkRepositoryImpl) FindByID(id uint) (*entity.BookmarkGroup, error) {

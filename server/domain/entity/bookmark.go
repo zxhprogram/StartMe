@@ -8,9 +8,10 @@ type BookmarkGroup struct {
 
 // bookmark item is the entity for real bookmark, it has a foreign key to bookmark
 type BookmarkItem struct {
-	Id      uint   `json:"id" gorm:"primaryKey"`
-	Name    string `json:"name"`
-	Url     string `json:"url"`
-	Icon    string `json:"icon"`
-	GroupId uint   `json:"groupId" gorm:"column:group_id"`
+	Id         uint   `json:"id" gorm:"primaryKey"`
+	Name       string `json:"name"`
+	Url        string `json:"url"`
+	Icon       string `json:"icon"`
+	GroupId    uint   `json:"groupId" gorm:"column:group_id"`
+	VisitCount uint   `json:"visitCount" gorm:"default:0"`
 }

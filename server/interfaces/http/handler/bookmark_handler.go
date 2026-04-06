@@ -35,6 +35,21 @@ func (h *BookmarkHandler) GetBookmarks(c *gin.Context) {
 	})
 }
 
+func (h *BookmarkHandler) IncreaseBookmarkCount(c *gin.Context) {
+	id := c.Param("id")
+	var uid uint
+	if _, err := fmt.Sscanf(id, "%d", &uid); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "invalid id",
+		})
+		return
+	}
+	h.bookmarkUsecase.IncreaseBookmarkCount(uid)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "ok",
+	})
+}
+
 func (h *BookmarkHandler) UpdateBookmarkGroup(c *gin.Context) {
 	var bookmarkGroupReq req.BookmarkGroupUpdateRequest
 	if err := c.ShouldBindJSON(&bookmarkGroupReq); err != nil {

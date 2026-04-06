@@ -18,4 +18,5 @@ type BookmarkRepository interface {
 	SaveOrUpdateBookItem(bookmarkItem *entity.BookmarkItem) error
 	DeleteBookItem(id uint) error
 	DeleteBookmarkItemByGroupId(groupId uint) error
+	FindBookmarkItemByID(id uint) (*entity.BookmarkItem, error)
 }

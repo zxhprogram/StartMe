@@ -67,6 +67,17 @@ Future<UpdateBookmarkGroupResponse> updateBookmarkGroup({
   }
 }
 
+Future<void> increaseBookmarkCount({required int bookmarkId}) async {
+  logger.info('API: 增加书签访问量 - $bookmarkId');
+  try {
+    var response = await dio.post('/bookmark/increase/$bookmarkId');
+    logger.info('API: 增加书签访问量成功 - $bookmarkId 响应: ${response.data}');
+  } catch (e, stackTrace) {
+    logger.severe('API: 增加书签访问量失败 - $bookmarkId', e, stackTrace);
+    rethrow;
+  }
+}
+
 class CreateBookmarkGroupResponse {
   String message;
   CreateBookmarkGroupResponseData? data;

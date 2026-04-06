@@ -17,9 +17,10 @@ type BookmarkGroupResponse struct {
 }
 
 type BookmarkItemResponse struct {
-	Id      uint   `json:"bookmarkId"`
-	Name    string `json:"bookmarkName"`
-	Url     string `json:"url"`
-	Icon    string `json:"icon"`
-	GroupId uint   `json:"groupId"`
+	Id         uint   `json:"bookmarkId"`
+	Name       string `json:"bookmarkName"`
+	Url        string `json:"url"`
+	Icon       string `json:"icon"`
+	GroupId    uint   `json:"groupId"`
+	VisitCount uint   `json:"visitCount"`
 }

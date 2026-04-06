@@ -32,6 +32,10 @@ func (r *Router) SetupRoutes(engine *gin.Engine) {
 	engine.GET("/bookmark/list", r.bookmarkHandler.GetBookmarks)
 	engine.POST("/bookmark/createGroup", r.bookmarkHandler.CreateBookmarkGroup)
 	engine.POST("/bookmark/updateGroup", r.bookmarkHandler.UpdateBookmarkGroup)
+
+	// 增加访问量
+	engine.POST("/bookmark/increase/:id", r.bookmarkHandler.IncreaseBookmarkCount)
+
 	engine.GET("/bookmark/:id", r.bookmarkHandler.GetBookmarkByID)
 	engine.PUT("/bookmark/:id", r.bookmarkHandler.UpdateBookmark)
 	engine.DELETE("/bookmark/:id", r.bookmarkHandler.DeleteBookmark)

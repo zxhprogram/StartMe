@@ -502,7 +502,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
                   width: 48,
                   height: 48,
                   child: GestureDetector(
-                    onTap: () {
+                    onTap: () async {
+                      await increaseBookmarkCount(bookmarkId: e.bookmarkId);
                       launchUrl(Uri.parse(e.url));
                     },
                     child: HoverCard(

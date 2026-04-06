@@ -12,6 +12,22 @@ type BookmarkUsecase struct {
 	bookmarkRepo repository.BookmarkRepository
 }
 
+func (u *BookmarkUsecase) IncreaseBookmarkCount(id uint) error {
+	bookmarkItem, err := u.bookmarkRepo.FindBookmarkItemByID(id)
+	if err != nil {
+		return err
+	}
+	if bookmarkItem == nil {
+		return fmt.Errorf("bookmark item not found")
+	}
+
+	bookmarkItem.VisitCount++
+	if err := u.bookmarkRepo.SaveOrUpdateBookItem(bookmarkItem); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (u *BookmarkUsecase) UpdateBookmarkGroup(request *req.BookmarkGroupUpdateRequest) (*res.BookmarkGroupResponse, error) {
 	bookmarkGroup, err := u.bookmarkRepo.FindByID(request.Id)
 	if err != nil {
