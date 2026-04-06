@@ -55,4 +55,8 @@ class UnsplashPhotoData {
       height: json['height'],
     );
   }
+  @override
+  String toString() {
+    return 'UnsplashPhotoData{id: $id, description: $description, altDescription: $altDescription, url: $url, thumUrl: $thumUrl, author: $author, authorUrl: $authorUrl, width: $width, height: $height}';
+  }
 }

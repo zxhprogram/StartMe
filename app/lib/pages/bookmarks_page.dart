@@ -33,9 +33,8 @@ class _BookmarksPageState extends State<BookmarksPage> {
   final _mergeTarget = signal<BookmarkGroup?>(null);
   final _urlInfo = signal<UrlInfoData?>(null);
   late TextEditingController nameController = TextEditingController();
-  final _backgroundState = signal(
-    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTYzMDd8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzUzOTc3OTd8&ixlib=rb-4.1.0&q=80&w=1080',
-  );
+  final _backgroundDataList = signal<List<UnsplashPhotoData>>([]);
+  final _backgroundInfo = signal<UnsplashPhotoData?>(null);
 
   @override
   void initState() {
@@ -219,9 +218,80 @@ class _BookmarksPageState extends State<BookmarksPage> {
   }
 
   void _changeBackground(BuildContext context) async {
+    // 先显示一个加载中的对话框
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      alignment: .bottomCenter,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('选择背景'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('请选择背景'),
+              const Gap(16),
+              // 使用 Watch 监听 signal 的变化
+              Watch((context) {
+                var photos = _backgroundDataList.value;
+                if (photos.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 500,
+                    maxHeight: 200,
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      spacing: 10,
+                      children: photos.map((e) {
+                        return GestureDetector(
+                          onTap: () {
+                            // 设置选中的背景
+                            _backgroundInfo.value = e;
+                            // Navigator.pop(dialogContext);
+                          },
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              image: DecorationImage(
+                                image: NetworkImage(e.thumUrl),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          actions: [
+            PrimaryButton(
+              child: const Text('取消'),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    // 异步获取数据
     var r = await getRandomPhotos();
+    logger.info('获取到的随机图片数据: ${r.data?.length ?? 0} 张');
+
     if (r.data != null) {
-      _backgroundState.value = r.data![0].url;
+      _backgroundDataList.value = r.data!;
     }
   }
 
@@ -230,7 +300,14 @@ class _BookmarksPageState extends State<BookmarksPage> {
     var bookmarks = _bookmarksState.watch(context);
     var willMergeItem = _willMergeItem.watch(context);
     var mergeTarget = _mergeTarget.watch(context);
-    var backgroundUrl = _backgroundState.watch(context);
+    var backgroundInfo = _backgroundInfo.watch(context);
+
+    // var backgroundDataList = _backgroundDataList.watch(context);
+    // var backgroundIndex = _backgroundIndex.watch(context);
+
+    // var backgroundUrl = backgroundDataList.isNotEmpty
+    //     ? backgroundDataList[backgroundIndex].url
+    //     : 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTYzMDd8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzUzOTc3OTd8&ixlib=rb-4.1.0&q=80&w=720';
 
     return ContextMenu(
       items: [
@@ -285,7 +362,11 @@ class _BookmarksPageState extends State<BookmarksPage> {
             image: DecorationImage(
               fit: BoxFit.cover,
               opacity: 0.3,
-              image: NetworkImage(backgroundUrl),
+              image: backgroundInfo?.url != null
+                  ? NetworkImage(backgroundInfo!.url)
+                  : const NetworkImage(
+                      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w5MTYzMDd8MHwxfHJhbmRvbXx8fHx8fHx8fDE3NzUzOTc3OTd8&ixlib=rb-4.1.0&q=80&w=720',
+                    ),
             ),
           ),
           child: Card(
